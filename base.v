@@ -1,6 +1,9 @@
 From Coq Require Import Lists.List.
 From Coq Require Import Strings.String.
-Import ListNotations.
+From Coq Require Import Arith.
+From VSA Require Import Lattice.
+
+Import SetNotations.
 
 Inductive aexp : Type :=
   | ANum (n : nat)
@@ -8,31 +11,60 @@ Inductive aexp : Type :=
   | AMinus (a1 a2 : aexp).
 
 Inductive bexp : Type :=
-  | BLe (a1 a2 : aexp)
-  | BNand (b1 b2 : bexp).
+  | BLe (a1 a2: aexp)
+  | BAnd (b1 b2: bexp)
+  | BOr (b1 b2: bexp)
+  | BNot (b: bexp).
 
 Definition label : Type := nat.
 Definition value : Type := nat.
 Definition variable : Type := string.
+Definition env : Type := variable -> value.
+
+Fixpoint aeval (a: aexp) (ρ: env) : value :=
+  match a with
+  | ANum n => n
+  | AId v => ρ v
+  | AMinus a1 a2 => (aeval a1 ρ) - (aeval a2 ρ)
+  end.
+
+Fixpoint beval (b: bexp) (ρ: env) : bool :=
+  match b with
+  | BLe a1 a2 => Nat.leb (aeval a1 ρ) (aeval a2 ρ)
+  | BAnd b1 b2 => (beval b1 ρ) && (beval b2 ρ)
+  | BOr b1 b2 => (beval b1 ρ) || (beval b2 ρ)
+  | BNot b => negb (beval b ρ)
+  end.
+
+Notation "'A⟦' A '⟧' ρ" := (aeval A ρ) (at level 40).
+Notation "'B⟦' B '⟧' ρ" := (beval B ρ) (at level 40).
 
 Inductive stmt: Type :=
-  | SAssign (l: label) (l': label) (v : variable) (a : aexp)
+  | SAssign (l: label) (v : variable) (a : aexp)
   | SSkip (l: label)
-  | SIf (l: label) (l': label) (b : bexp) (s1 : stmt)
-  | SIfElse (l: label) (l': label) (b : bexp) (s1 : stmt) (s2 : stmt)
-  | SWhile (l: label) (l': label) (b : bexp) (s : stmt)
-  | SBreak (l: label) (l': label)
-  | SCompound (l: label) (l': label) (list : list stmt).
+  | SIf (l: label) (b : bexp) (s1 : stmt)
+  | SIfElse (l: label) (b : bexp) (s1 : stmt) (s2 : stmt)
+  | SWhile (l: label) (b : bexp) (s : stmt)
+  | SBreak (l: label)
+  | SCompound (list : stmt_list)
+with stmt_list: Type :=
+  | stmt_list_singleton (s: stmt)
+  | stmt_list_cons (s: stmt) (list: stmt_list).
 
-Definition at_stmt (s: stmt): label :=
+Fixpoint at_stmt (s: stmt): label :=
   match s with
-  | SAssign l _ _ _ => l
+  | SAssign l _ _ => l
   | SSkip l => l
-  | SIf l _ _ _ => l
-  | SIfElse l _ _ _ _ => l
-  | SWhile l _ _ _ => l
-  | SBreak l _ => l
-  | SCompound l _ _ => l
+  | SIf l _ _ => l
+  | SIfElse l _ _ _ => l
+  | SWhile l _ _ => l
+  | SBreak l => l
+  | SCompound list => at_stmt_list list
+  end
+with at_stmt_list (list: stmt_list): label :=
+  match list with
+  | stmt_list_singleton s => at_stmt s
+  | stmt_list_cons s _ => at_stmt s
   end.
 
 Inductive trace_action : Type :=
@@ -49,9 +81,12 @@ Inductive finite_trace : Type :=
 CoInductive infinite_trace : Type :=
   | infinite_trace_cons (l : label) (a : trace_action) (t : infinite_trace).
 
+(* implicitely a bi-inductive type *)
 Inductive trace : Type :=
   | finite : finite_trace -> trace
   | infinite : infinite_trace -> trace.
+
+Coercion finite_trace_nil : label >-> finite_trace.
 
 Definition at_finite_trace (t : finite_trace) : label :=
   match t with
@@ -76,48 +111,33 @@ Fixpoint after_finite_trace (t : finite_trace) : label :=
   | finite_trace_cons _ _ t' => after_finite_trace t'
   end.
 
-Definition after_trace (t : trace) : option label :=
-  match t with
-  | finite t' => Some (after_finite_trace t')
-  | infinite t' => None
-  end.
+Notation "'at⟦' S ⟧" := (at_stmt S).
+Notation "'at⟦' π '⟧t'" := (at_finite_trace π).
+Notation "'after⟦' π '⟧t'" := (after_finite_trace π).
 
-Fixpoint concat_finite (t1: finite_trace) (t2: finite_trace) : option (finite_trace) :=
+Program Fixpoint concat_finite (t1: finite_trace) (t2: finite_trace) {_ : after⟦t1⟧t = at⟦t2⟧t}: finite_trace :=
   match t1 with
-  | finite_trace_nil l1 =>
-      let l2 := at_finite_trace t2 in
-      if Nat.eqb l1 l2 then Some t2 else None
-  | finite_trace_cons l1 a t1' =>
-      match concat_finite t1' t2 with
-      | Some t2' => Some (finite_trace_cons l1 a t2')
-      | None => None
-      end
+  | finite_trace_nil l1 => t2
+  | finite_trace_cons l1 a t1' => finite_trace_cons l1 a (concat_finite t1' t2)
   end.
 
-Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) : option (infinite_trace) :=
+Notation "t1 ⁀ t2" := (concat_finite t1 t2) (at level 40).
+Notation "l ⟶( a ) p" := (finite_trace_cons l a p) (at level 50).
+
+Program Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) {_ : after⟦t1⟧t = at_infinite_trace t2}: infinite_trace :=
   match t1 with
-  | finite_trace_nil l1 =>
-      let l2 := at_infinite_trace t2 in
-      if Nat.eqb l1 l2 then Some t2 else None
-  | finite_trace_cons l1 a t1' =>
-      match concat_infinite t1' t2 with
-      | Some t2' => Some (infinite_trace_cons l1 a t2')
-      | None => None
-      end
+  | finite_trace_nil l1 => t2
+  | finite_trace_cons l1 a t1' => infinite_trace_cons l1 a (concat_infinite t1' t2)
   end.
 
-Definition concat (t1: trace) (t2: trace) : option trace :=
+Program Fixpoint concat (t1: trace) (t2: trace) : option trace :=
   match t1, t2 with
   | finite t1', finite t2' =>
-      match concat_finite t1' t2' with
-      | Some t => Some (finite t)
-      | None => None
-      end
+      if Nat.eq_dec after⟦t1'⟧t at⟦t2'⟧t then Some (finite (concat_finite t1' t2'))
+      else None
   | finite t1', infinite t2' =>
-      match concat_infinite t1' t2' with
-      | Some t => Some (infinite t)
-      | None => None
-      end
+      if Nat.eq_dec after⟦t1'⟧t (at_infinite_trace t2') then Some (infinite (concat_infinite t1' t2'))
+      else None
   | infinite _, _ => Some t1
   end.
 
@@ -140,33 +160,22 @@ Definition value_of (t: finite_trace) (v: variable) : value :=
   | None => 0
   end.
 
-Definition env : Type := variable -> value.
+Notation "'ϱ(' π ')'" := (value_of π).
 
-Fixpoint aeval (a: aexp) (ρ: env) : value :=
-  match a with
-  | ANum n => n
-  | AId v => ρ v
-  | AMinus a1 a2 => (aeval a1 ρ) - (aeval a2 ρ)
-  end.
+Inductive deductive_prefix_trace_semantics (l': label) (π: finite_trace): stmt -> ℘ finite_trace :=
+  | dpts_stmt :
+    forall S, at⟦S⟧ = after⟦π⟧t -> deductive_prefix_trace_semantics l' π S at⟦S⟧
+  | dpts_assign :
+    forall x a, deductive_prefix_trace_semantics l' π (SAssign after⟦π⟧t x a) (after⟦π⟧t ⟶(TAssign x a (A⟦a⟧ϱ(π))) l')
+  | dpts_while_false :
+    forall b S π', after⟦π⟧t = at⟦π'⟧t -> at⟦π'⟧t = after⟦π'⟧t -> B⟦b⟧ϱ(π ⁀ π') = false ->
+      deductive_prefix_trace_semantics l' π (SWhile after⟦π⟧t b S) (after⟦π⟧t ⟶(TBInvalid b) l').
 
-Definition trace_set : Type := trace -> Prop.
-
-Definition empty_trace_set : trace_set := fun _ => False.
-Definition singleton_trace_set : trace -> trace_set := fun t0 t => t0 = t.
-Definition join_trace_set : trace_set -> trace_set -> trace_set :=
-  fun s1 s2 t => s1 t \/ s2 t.
-
-Definition prefix_trace_semantics (s: stmt) (t: finite_trace) : trace_set :=
-  if (Nat.eqb (after_finite_trace t) (at_stmt s)) then
-    match s with
-    | SAssign l l' x a =>
-        join_trace_set
-          (singleton_trace_set (finite (finite_trace_nil l)))
-          (fun t' => exists val, t' = finite (finite_trace_cons l (TAssign x a val) (finite_trace_nil l')) /\
-                           val = aeval a (value_of t))
-    | SSkip l => singleton_trace_set (finite (finite_trace_nil l))
-    | SWhile l l' b s => empty_trace_set
-    | _ => empty_trace_set
+Definition fixpoint_prefix_trace_semantics (l': label) (π: finite_trace) (S: stmt): ℘ finite_trace :=
+  if (Nat.eqb at⟦S⟧ at⟦π⟧t) then
+    match S with
+    | SAssign l x a => {{ finite_trace_nil l }} ∪ {{ l ⟶(TAssign x a (A⟦a⟧ϱ(π))) l' }}
+    | _ => {{ at⟦S⟧ }}
     end
   else
-    empty_trace_set.
+    ∅.
