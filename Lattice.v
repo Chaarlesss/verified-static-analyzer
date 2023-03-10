@@ -2,18 +2,29 @@ Require Import Coq.Relations.Relations.
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Logic.FunctionalExtensionality.
 
-Section Sets.
+Module SetNotations.
 
-  Definition Subset (A: Type) : Type := A -> Prop.
-  Definition In {A: Type} (S: Subset A) (x: A) : Prop := S x.
-  Definition Subset_impl {A: Type} (S T: Subset A) : Prop := forall (x : A), In S x -> In T x.
+  Notation "'℘' A" := (A -> Prop) (at level 0).
+  Notation "x ∈ P" := (P x) (at level 19, only parsing).
+  Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20). 
+  Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
+  Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
+  Notation "{{ x }}" := (fun y => y = x).
+  Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
+  Notation "∅" := (fun _ => False).
+
+End SetNotations.
+
+Import SetNotations.
+
+Section Sets.
 
   Record SetElt {A: Type} {S: A -> Prop}: Type := {
     elt: A;
-    witness: In S elt
+    witness: elt ∈ S
   }.
 
-  Definition PairSet {A: Type} (x y: A) : Subset A := fun u => x = u \/ y = u.
+  Definition PairSet {A: Type} (x y: A) : ℘ A := fun u => x = u \/ y = u.
   Definition PairSetElt {A: Type} (x y: A) := @SetElt _ (PairSet x y).
   Definition PairSetEltFirst {A : Type} (x y: A) : PairSetElt x y :=
      {| elt := x; witness := or_introl eq_refl |}.
@@ -21,12 +32,12 @@ Section Sets.
      {| elt := y; witness := or_intror eq_refl |}.
 
   Lemma PairSet_id {A: Type} (x y v: A):
-    In (PairSet x y) v <-> x = v \/ y = v.
+    v ∈ (PairSet x y) <-> x = v \/ y = v.
   Proof.
     split; auto.
   Qed.
 
-  Definition Transport {A: Type} {S T: Subset A} (H : Subset_impl S T): @SetElt _ S -> @SetElt _ T :=
+  Definition Transport {A: Type} {S T: ℘ A} (H : S ⊆ T): @SetElt _ S -> @SetElt _ T :=
     fun s => {| elt := elt s; witness := H (elt s) (witness s) |}.
 
 End Sets.
@@ -48,14 +59,14 @@ Class Poset (A: Type) {O: Ord A}: Prop := {
   poset_trans :> Transitive (⊑)
 }.
 
-Definition UpperBound {A: Type} `{Ord A} (S: Subset A) (u: A) := forall x, In S x -> x ⊑ u.
+Definition UpperBound {A: Type} `{Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
 
-Definition LowerBound {A: Type} `{Ord A} (S: Subset A) (u: A) := forall x, In S x -> u ⊑ x.
+Definition LowerBound {A: Type} `{Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
 
 Class FMeet A := fmeet: A -> A -> A.
-Class Meet A := meet: Subset A -> A.
+Class Meet A := meet: ℘ A -> A.
 Class FJoin A := fjoin: A -> A -> A.
-Class Join A := join: Subset A -> A.
+Class Join A := join: ℘ A -> A.
 Class Top A := top: A.
 Class Bottom A := bottom: A.
 
@@ -95,20 +106,23 @@ Instance FMeetMeet (A: Type) `{Meet A}: FMeet A := fun x y => meet (PairSet x y)
 
 Class CompleteLattice (A: Type) `{Ord A} `{Join A} `{Meet A} `{Top A} `{Bottom A}: Prop := {
   complete_lattice_lattice :> Lattice A;
-  meet_glb: forall (S: Subset A), LowerBound S (meet S) /\ UpperBound (LowerBound S) (meet S);
-  join_lub: forall (S: Subset A), UpperBound S (join S) /\ LowerBound (UpperBound S) (join S);
+  meet_glb: forall (S: ℘ A), LowerBound S (meet S) /\ UpperBound (LowerBound S) (meet S);
+  join_lub: forall (S: ℘ A), UpperBound S (join S) /\ LowerBound (UpperBound S) (join S);
   top_supremum: forall x, x ⊑ ⊤;
   bottom_infimum: forall x, ⊥ ⊑ x
 }.
 
 Section Join.
-Lemma join_sl_ub {A: Type} `{JoinSemiLattice A}:
+
+Context {A: Type} `{JoinSemiLattice A}.
+
+Lemma join_sl_ub:
   forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
 Proof.
   intros. apply join_sl_lub. reflexivity.
 Qed.
 
-Lemma join_sl_idempotent {A: Type} `{JoinSemiLattice A}:
+Lemma join_sl_idempotent:
   forall x, x ⊔ x = x.
 Proof.
   intros x.
@@ -117,14 +131,14 @@ Proof.
   - apply join_sl_ub.
 Qed.
 
-Lemma join_sl_comm {A: Type} `{JoinSemiLattice A}:
+Lemma join_sl_comm:
   forall x y, x ⊔ y = y ⊔ x.
 Proof.
   intros x y.
   apply poset_antisym; apply join_sl_lub; split; apply join_sl_ub.
 Qed.
 
-Lemma join_sl_assoc {A: Type} `{JoinSemiLattice A}:
+Lemma join_sl_assoc:
   forall x y z, x ⊔ (y ⊔ z) = (x ⊔ y) ⊔ z.
 Proof.
   intros x y z.
@@ -145,19 +159,21 @@ End Join.
 
 Section Meet.
 
-Lemma meet_sl_lb {A: Type} `{MeetSemiLattice A}:
+Context {A: Type} `{MeetSemiLattice A}.
+
+Lemma meet_sl_lb:
   forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
 Admitted.
 
-Lemma meet_sl_idempotent {A: Type} `{MeetSemiLattice A}:
+Lemma meet_sl_idempotent:
   forall x, x ⊓ x = x.
 Admitted.
 
-Lemma meet_sl_comm {A: Type} `{MeetSemiLattice A}:
+Lemma meet_sl_comm:
   forall x y, x ⊓ y = y ⊓ x.
 Admitted.
 
-Lemma meet_sl_assoc {A: Type} `{MeetSemiLattice A}:
+Lemma meet_sl_assoc:
   forall x y z, x ⊓ (y ⊓ z) = (x ⊓ y) ⊓ z.
 Admitted.
 
@@ -221,28 +237,3 @@ Next Obligation.
 Defined.
 
 Instance PointwiseLattice (X A: Type) `{Lattice A}: Lattice (X -> A) := { }.
-
-Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B} := {
-  increasing : forall x y, x ⊑ y -> f x ⊑ f y
-}.
-
-Definition PreFixpt {A: Type} (f: A -> A) `{Increasing A}: Subset A :=
-  fun x => x ⊑ f x.
-
-Definition PostFixpt {A: Type} (f: A -> A) `{Increasing A}: Subset A :=
-  fun x => f x ⊑ x.
-
-Definition Fixpt {A: Type} (f: A -> A) `{Increasing A}: Subset A :=
-  fun x => f x = x.
-
-Reserved Notation "'α' c " (at level 10).
-Reserved Notation "'γ' a " (at level 10).
-
-Print ord.
-
-Class GaloisConnection (A C: Type) `{Poset A} `{Poset C} := {
-  abstraction : C -> A where "'α' c" := (abstraction c);
-  concretization : A -> C where "'γ' a " := (concretization a);
-
-  galois_connection: forall (P: C) (Q: A), α P ⊑ Q <-> P ⊑ γ Q
-}.
