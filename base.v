@@ -115,28 +115,28 @@ Notation "'at⟦' S ⟧" := (at_stmt S).
 Notation "'at⟦' π '⟧t'" := (at_finite_trace π).
 Notation "'after⟦' π '⟧t'" := (after_finite_trace π).
 
-Program Fixpoint concat_finite (t1: finite_trace) (t2: finite_trace) {_ : after⟦t1⟧t = at⟦t2⟧t}: finite_trace :=
+Program Fixpoint concat_finite (t1: finite_trace) (t2: finite_trace) (_ : after⟦t1⟧t = at⟦t2⟧t): finite_trace :=
   match t1 with
   | finite_trace_nil l1 => t2
-  | finite_trace_cons l1 a t1' => finite_trace_cons l1 a (concat_finite t1' t2)
+  | finite_trace_cons l1 a t1' => finite_trace_cons l1 a (concat_finite t1' t2 _)
   end.
 
 Notation "t1 ⁀ t2" := (concat_finite t1 t2) (at level 40).
 Notation "l ⟶( a ) p" := (finite_trace_cons l a p) (at level 50).
 
-Program Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) {_ : after⟦t1⟧t = at_infinite_trace t2}: infinite_trace :=
+Program Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) (_ : after⟦t1⟧t = at_infinite_trace t2): infinite_trace :=
   match t1 with
   | finite_trace_nil l1 => t2
-  | finite_trace_cons l1 a t1' => infinite_trace_cons l1 a (concat_infinite t1' t2)
+  | finite_trace_cons l1 a t1' => infinite_trace_cons l1 a (concat_infinite t1' t2 _)
   end.
 
-Program Fixpoint concat (t1: trace) (t2: trace) : option trace :=
+Program Definition concat (t1: trace) (t2: trace) : option trace :=
   match t1, t2 with
   | finite t1', finite t2' =>
-      if Nat.eq_dec after⟦t1'⟧t at⟦t2'⟧t then Some (finite (concat_finite t1' t2'))
+      if Nat.eq_dec after⟦t1'⟧t at⟦t2'⟧t then Some (finite (concat_finite t1' t2' _))
       else None
   | finite t1', infinite t2' =>
-      if Nat.eq_dec after⟦t1'⟧t (at_infinite_trace t2') then Some (infinite (concat_infinite t1' t2'))
+      if Nat.eq_dec after⟦t1'⟧t (at_infinite_trace t2') then Some (infinite (concat_infinite t1' t2' _))
       else None
   | infinite _, _ => Some t1
   end.
