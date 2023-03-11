@@ -115,7 +115,7 @@ Class CompleteLattice (A: Type) `{Ord A} `{Join A} `{Meet A} `{Top A} `{Bottom A
 Section Join.
 
 Context {A: Type} `{JoinSemiLattice A}.
-
+  
 Lemma join_sl_ub:
   forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
 Proof.
@@ -160,7 +160,7 @@ End Join.
 Section Meet.
 
 Context {A: Type} `{MeetSemiLattice A}.
-
+  
 Lemma meet_sl_lb:
   forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
 Admitted.
@@ -203,7 +203,19 @@ Instance PointwiseFJoin (X A: Type) `{FJoin A} : FJoin (X -> A) :=
 Instance PointwiseFMeet (X A: Type) `{FMeet A} : FMeet (X -> A) :=
   fun f g (x : X) => f x ⊓ g x.
 
-Typeclasses Transparent PointwiseOrd PointwiseFJoin PointwiseFMeet.
+Instance PointwiseJoin (X A: Type) `{Join A} : Join (X -> A) :=
+  fun (S: ℘ (X -> A)) (x: X) => join (fun a => exists f, f ∈ S -> a = f x).
+
+Instance PointwiseMeet (X A: Type) `{Meet A} : Meet (X -> A) :=
+  fun (S: ℘ (X -> A)) (x: X) => meet (fun a => exists f, f ∈ S -> a = f x).
+
+Instance PointwiseTop (X A: Type) `{Top A} : Top (X -> A) :=
+  fun _ => ⊤.
+
+Instance PointwiseBottom (X A: Type) `{Bottom A} : Bottom (X -> A) :=
+  fun _ => ⊥.
+
+Typeclasses Transparent PointwiseOrd PointwiseFJoin PointwiseFMeet PointwiseJoin PointwiseMeet PointwiseTop PointwiseBottom.
 
 Instance PointwiseOrd_Reflexive (X A: Type) `{Poset A}: Reflexive (PointwiseOrd X A).
 Proof.
@@ -220,20 +232,24 @@ Proof.
   reduce_goal. transitivity (y x0). apply H0. apply H1.
 Qed.
 
-Instance PointwisePoset (X A: Type) `{Poset A} : Poset (X -> A) := { }.
+Program Instance PointwisePoset (X A: Type) `{Poset A} : Poset (X -> A).
 
-Program Instance PointwiseJoinSemiLattice (X A: Type) `{FJoin A} `{JoinSemiLattice A}: JoinSemiLattice (X -> A) := { }.
+Program Instance PointwiseJoinSemiLattice (X A: Type) `{FJoin A} `{JoinSemiLattice A}: JoinSemiLattice (X -> A).
 Next Obligation.
   split.
   - intros [? ?] ?. apply join_sl_lub. auto.
   - intros H__join. split; intros x0; (transitivity (x x0 ⊔ y x0); [apply join_sl_ub | apply H__join]).
 Defined.
 
-Program Instance PointwiseMeetSemiLattice (X A: Type) `{FMeet A} `{MeetSemiLattice A}: MeetSemiLattice (X -> A) := { }.
+Program Instance PointwiseMeetSemiLattice (X A: Type) `{FMeet A} `{MeetSemiLattice A}: MeetSemiLattice (X -> A).
 Next Obligation.
   split.
   - intros [? ?] ?. apply meet_sl_glb. auto.
   - intros H__meet. split; intros x0; (transitivity (x x0 ⊓ y x0); [apply H__meet | apply meet_sl_lb]).
 Defined.
 
-Instance PointwiseLattice (X A: Type) `{Lattice A}: Lattice (X -> A) := { }.
+Program Instance PointwiseLattice (X A: Type) `{Lattice A}: Lattice (X -> A).
+
+Program Instance PointwiseCompleteLattice (X A: Type) `{CompleteLattice A}: CompleteLattice (X -> A).
+Next Obligation.
+  apply (@PointwiseLattice X A).

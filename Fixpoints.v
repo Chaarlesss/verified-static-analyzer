@@ -2,35 +2,37 @@ From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Lattice.
 
-Class Increasing (A B: Type) (f: A -> B) `{Poset A} `{Poset B} := {
+Import SetNotations.
+
+Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B} := {
   increasing : forall x y, x ⊑ y -> f x ⊑ f y
 }.
 
-Definition PreFixpoints {A: Type} (f: A -> A) `{Increasing A A f}: Subset A :=
+Definition PreFixpoints {A: Type} (f: A -> A) `{Increasing A A f}: ℘ A :=
   fun x => x ⊑ f x.
 
-Definition PostFixpoints {A: Type} (f: A -> A) `{Increasing A A f}: Subset A :=
+Definition PostFixpoints {A: Type} (f: A -> A) `{Increasing A A f}: ℘ A :=
   fun x => f x ⊑ x.
 
-Definition Fixpoints {A: Type} (f: A -> A) `{Increasing A A f}: Subset A :=
+Definition Fixpoints {A: Type} (f: A -> A) `{Increasing A A f}: ℘ A :=
   fun x => f x = x.
 
-Definition lfp {A: Type} (f: A -> A) `{Increasing A A f} (u: A) :=
-  LowerBound (Fixpoints f) u /\ In (Fixpoints f) u.
+Definition lfp_iff {A: Type} (f: A -> A) `{Increasing A A f} (u: A) :=
+  LowerBound (Fixpoints f) u /\ u ∈ (Fixpoints f).
 
-Definition glp {A: Type} (f: A -> A) `{Increasing A A f} (u: A) :=
-  UpperBound (Fixpoints f) u /\ In (Fixpoints f) u.
+Definition glp_iff {A: Type} (f: A -> A) `{Increasing A A f} (u: A) :=
+  UpperBound (Fixpoints f) u /\ u ∈ (Fixpoints f).
 
 Section Tarski.
 
-Context (A: Type) `{CompleteLattice A} (f: A -> A) {I: Increasing A A f}.
+Context {A: Type} `{CompleteLattice A} (f: A -> A) {I: Increasing f}.
 
-Definition lfp_expr: A := meet (PostFixpoints f).
+Definition lfp_tarski: A := meet (PostFixpoints f).
 
-Lemma lfp_fixpoint:
-  f (lfp_expr) = lfp_expr.
+Lemma lfp_tarski_fixpoint:
+  f (lfp_tarski) = lfp_tarski.
 Proof.
-  assert (f lfp_expr ⊑ lfp_expr).
+  assert (f lfp_tarski ⊑ lfp_tarski).
   {
     apply meet_glb. intros x H__x.
     transitivity (f x); auto.
@@ -39,23 +41,22 @@ Proof.
     assumption.
   }
   apply antisymmetry; auto.
-  apply meet_glb. unfold In. unfold PostFixpoints.
-  apply increasing. assumption.
+  apply meet_glb. apply increasing. assumption.
 Qed.
 
-Lemma lfp_leastfixpoint:
-  LowerBound (Fixpoints f) lfp_expr.
+Lemma lfp_tarski_leastfixpoint:
+  LowerBound (Fixpoints f) lfp_tarski.
 Proof.
   intros u H__u.
-  apply meet_glb. unfold In. unfold PostFixpoints. rewrite H__u. reflexivity.
+  apply meet_glb. unfold PostFixpoints. rewrite H__u. reflexivity.
 Qed.
 
-Theorem lfp_tarski:
-  lfp f (meet (PostFixpoints f)).
+Theorem lfp_tarski_iff:
+  lfp_iff f lfp_tarski.
 Proof.
   split.
-  - apply lfp_leastfixpoint.
-  - apply lfp_fixpoint.
+  - apply lfp_tarski_leastfixpoint.
+  - apply lfp_tarski_fixpoint.
 Qed.
 
 End Tarski.
