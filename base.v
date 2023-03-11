@@ -74,16 +74,16 @@ Inductive trace_action : Type :=
   | TBreak
   | TSkip.
 
-Inductive finite_trace : Type :=
-  | finite_trace_nil (l : label)
-  | finite_trace_cons (l : label) (a : trace_action) (t : finite_trace).
+Inductive finite_trace: Type :=
+  | finite_trace_nil (l: label)
+  | finite_trace_cons (l: label) (a : trace_action) (t : finite_trace).
 
-CoInductive infinite_trace : Type :=
-  | infinite_trace_cons (l : label) (a : trace_action) (t : infinite_trace).
+CoInductive infinite_trace: Type :=
+  | infinite_trace_cons (l: label) (a : trace_action) (t : infinite_trace).
 
 (* implicitely a bi-inductive type *)
-Inductive trace : Type :=
-  | finite : finite_trace -> trace
+Inductive trace: Type :=
+  | finite: finite_trace -> trace
   | infinite : infinite_trace -> trace.
 
 Coercion finite_trace_nil : label >-> finite_trace.
@@ -115,28 +115,28 @@ Notation "'at⟦' S ⟧" := (at_stmt S).
 Notation "'at⟦' π '⟧t'" := (at_finite_trace π).
 Notation "'after⟦' π '⟧t'" := (after_finite_trace π).
 
-Program Fixpoint concat_finite (t1: finite_trace) (t2: finite_trace) (_ : after⟦t1⟧t = at⟦t2⟧t): finite_trace :=
+Program Fixpoint concat_finite (t1 t2: finite_trace) {_: after⟦t1⟧t = at⟦t2⟧t}: finite_trace :=
   match t1 with
-  | finite_trace_nil l1 => t2
-  | finite_trace_cons l1 a t1' => finite_trace_cons l1 a (concat_finite t1' t2 _)
+  | finite_trace_nil _ => t2
+  | finite_trace_cons l a t1' => finite_trace_cons l a (@concat_finite t1' t2 _)
   end.
 
 Notation "t1 ⁀ t2" := (concat_finite t1 t2) (at level 40).
-Notation "l ⟶( a ) p" := (finite_trace_cons l a p) (at level 50).
+Notation "l ⟶( a ) π" := (finite_trace_cons l a π) (at level 50).
 
-Program Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) (_ : after⟦t1⟧t = at_infinite_trace t2): infinite_trace :=
+Program Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) {_: after⟦t1⟧t = at_infinite_trace t2}: infinite_trace :=
   match t1 with
-  | finite_trace_nil l1 => t2
-  | finite_trace_cons l1 a t1' => infinite_trace_cons l1 a (concat_infinite t1' t2 _)
+  | finite_trace_nil _ => t2
+  | finite_trace_cons l a t1' => infinite_trace_cons l a (@concat_infinite t1' t2 _)
   end.
 
-Program Definition concat (t1: trace) (t2: trace) : option trace :=
+Program Definition concat (t1 t2: trace) : option trace :=
   match t1, t2 with
   | finite t1', finite t2' =>
-      if Nat.eq_dec after⟦t1'⟧t at⟦t2'⟧t then Some (finite (concat_finite t1' t2' _))
+      if Nat.eq_dec after⟦t1'⟧t at⟦t2'⟧t then Some (finite (@concat_finite t1' t2' _))
       else None
   | finite t1', infinite t2' =>
-      if Nat.eq_dec after⟦t1'⟧t (at_infinite_trace t2') then Some (infinite (concat_infinite t1' t2' _))
+      if Nat.eq_dec after⟦t1'⟧t (at_infinite_trace t2') then Some (infinite (@concat_infinite t1' t2' _))
       else None
   | infinite _, _ => Some t1
   end.
@@ -164,18 +164,19 @@ Notation "'ϱ(' π ')'" := (value_of π).
 
 Inductive deductive_prefix_trace_semantics (l': label) (π: finite_trace): stmt -> ℘ finite_trace :=
   | dpts_stmt :
-    forall S, at⟦S⟧ = after⟦π⟧t -> deductive_prefix_trace_semantics l' π S at⟦S⟧
+    forall S, at⟦S⟧ = after⟦π⟧t -> deductive_prefix_trace_semantics l' π S after⟦π⟧t
   | dpts_assign :
     forall x a, deductive_prefix_trace_semantics l' π (SAssign after⟦π⟧t x a) (after⟦π⟧t ⟶(TAssign x a (A⟦a⟧ϱ(π))) l')
   | dpts_while_false :
-    forall b S π', after⟦π⟧t = at⟦π'⟧t -> at⟦π'⟧t = after⟦π'⟧t -> B⟦b⟧ϱ(π ⁀ π') = false ->
+    forall b S π' (H: after⟦π⟧t = at⟦π'⟧t), after⟦π⟧t = after⟦π'⟧t -> B⟦b⟧ϱ(@concat_finite π π' H) = false ->
       deductive_prefix_trace_semantics l' π (SWhile after⟦π⟧t b S) (after⟦π⟧t ⟶(TBInvalid b) l').
 
 Definition fixpoint_prefix_trace_semantics (l': label) (π: finite_trace) (S: stmt): ℘ finite_trace :=
-  if (Nat.eqb at⟦S⟧ at⟦π⟧t) then
+  let l := after⟦π⟧t in
+  if (Nat.eqb at⟦S⟧ l) then
     match S with
-    | SAssign l x a => {{ finite_trace_nil l }} ∪ {{ l ⟶(TAssign x a (A⟦a⟧ϱ(π))) l' }}
-    | _ => {{ at⟦S⟧ }}
+    | SAssign _ x a => {{ finite_trace_nil l }} ∪ {{ l ⟶(TAssign x a (A⟦a⟧ϱ(π))) l' }}
+    | _ => {{ l }}
     end
   else
     ∅.
