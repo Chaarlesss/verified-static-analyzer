@@ -17,6 +17,7 @@ End SetNotations.
 
 Import SetNotations.
 
+(* TODO: move to another file *)
 Section Sets.
 
   Record SetElt {A: Type} {S: A -> Prop}: Type := {
@@ -42,6 +43,8 @@ Section Sets.
 
 End Sets.
 
+Hint Unfold PairSet: core.
+
 Declare Scope lattice.
 Global Open Scope lattice.
 
@@ -53,6 +56,7 @@ Notation "(⊑)" := ord (only parsing) : lattice.
 Notation "( X ⊑)" := (ord X) (only parsing) : lattice.
 Notation "(⊑ X )" := (fun Y => Y ⊑ X) (only parsing) : lattice.
 
+(* Parametrize over an equivalence relation ? *)
 Class Poset (A: Type) {O: Ord A}: Prop := {
   poset_refl :> Reflexive (⊑);
   poset_antisym :> Antisymmetric A eq (⊑);
@@ -106,8 +110,8 @@ Instance FMeetMeet (A: Type) `{Meet A}: FMeet A := fun x y => meet (PairSet x y)
 
 Class CompleteLattice (A: Type) `{Ord A} `{Join A} `{Meet A} `{Top A} `{Bottom A}: Prop := {
   complete_lattice_lattice :> Lattice A;
-  meet_glb: forall (S: ℘ A), LowerBound S (meet S) /\ UpperBound (LowerBound S) (meet S);
   join_lub: forall (S: ℘ A), UpperBound S (join S) /\ LowerBound (UpperBound S) (join S);
+  meet_glb: forall (S: ℘ A), LowerBound S (meet S) /\ UpperBound (LowerBound S) (meet S);
   top_supremum: forall x, x ⊑ ⊤;
   bottom_infimum: forall x, ⊥ ⊑ x
 }.
@@ -194,62 +198,121 @@ Lemma meet_join_absortive {A: Type} `{Lattice A}:
   forall x y, (x ⊓ y) ⊔ x = x.
 Admitted.
 
-Instance PointwiseOrd (X A: Type) `{Ord A} : Ord (X -> A) :=
+Section Pointwise.
+
+Context (X A: Type).
+
+Instance PointwiseOrd `{Ord A} : Ord (X -> A) :=
    fun f g => forall (x : X), f x ⊑ g x.
 
-Instance PointwiseFJoin (X A: Type) `{FJoin A} : FJoin (X -> A) :=
+Instance PointwiseFJoin `{FJoin A} : FJoin (X -> A) :=
   fun f g (x : X) => f x ⊔ g x.
 
-Instance PointwiseFMeet (X A: Type) `{FMeet A} : FMeet (X -> A) :=
+Instance PointwiseFMeet `{FMeet A} : FMeet (X -> A) :=
   fun f g (x : X) => f x ⊓ g x.
 
-Instance PointwiseJoin (X A: Type) `{Join A} : Join (X -> A) :=
-  fun (S: ℘ (X -> A)) (x: X) => join (fun a => exists f, f ∈ S -> a = f x).
+Instance PointwiseJoin `{Join A} : Join (X -> A) :=
+  fun (S: ℘ (X -> A)) (x: X) => join (fun a => exists f, f ∈ S /\ a = f x).
 
-Instance PointwiseMeet (X A: Type) `{Meet A} : Meet (X -> A) :=
-  fun (S: ℘ (X -> A)) (x: X) => meet (fun a => exists f, f ∈ S -> a = f x).
+Instance PointwiseMeet `{Meet A} : Meet (X -> A) :=
+  fun (S: ℘ (X -> A)) (x: X) => meet (fun a => exists f, f ∈ S /\ a = f x).
 
-Instance PointwiseTop (X A: Type) `{Top A} : Top (X -> A) :=
+Instance PointwiseTop `{Top A} : Top (X -> A) :=
   fun _ => ⊤.
 
-Instance PointwiseBottom (X A: Type) `{Bottom A} : Bottom (X -> A) :=
+Instance PointwiseBottom `{Bottom A} : Bottom (X -> A) :=
   fun _ => ⊥.
 
 Typeclasses Transparent PointwiseOrd PointwiseFJoin PointwiseFMeet PointwiseJoin PointwiseMeet PointwiseTop PointwiseBottom.
 
-Instance PointwiseOrd_Reflexive (X A: Type) `{Poset A}: Reflexive (PointwiseOrd X A).
+Instance PointwiseOrd_Reflexive `{Poset A}: Reflexive PointwiseOrd.
 Proof.
   reduce_goal. reflexivity.
 Qed.
 
-Instance PointwiseOrd_Antisymmetric (X A: Type) `{Poset A}: Antisymmetric (X -> A) eq (PointwiseOrd X A).
+Instance PointwiseOrd_Antisymmetric `{Poset A}: Antisymmetric (X -> A) eq PointwiseOrd.
 Proof.
   reduce_goal. apply functional_extensionality. intros z. apply poset_antisym; auto.
 Qed.
 
-Instance PointwiseOrd_Transitive (X A: Type) `{Poset A}: Transitive (PointwiseOrd X A).
+Instance PointwiseOrd_Transitive `{Poset A}: Transitive PointwiseOrd.
 Proof.
   reduce_goal. transitivity (y x0). apply H0. apply H1.
 Qed.
 
-Program Instance PointwisePoset (X A: Type) `{Poset A} : Poset (X -> A).
+(* Our first soundness proof ! *)
+Lemma PointwiseJoinFJoin `{CompleteLattice A}:
+  @FJoinJoin (X -> A) PointwiseJoin = @PointwiseFJoin (FJoinJoin A).
+Proof.
+  apply functional_extensionality. intros f.
+  apply functional_extensionality. intros g.
+  apply functional_extensionality. intros x.
+  apply antisymmetry.
+  - apply join_lub. intros z [h [[H__h | H__h] H__z]]; subst; apply join_sl_ub.
+  - apply join_lub. intros z [H__z | H__z]; subst; apply join_lub; [ exists f | exists g ]; auto.
+Qed.
 
-Program Instance PointwiseJoinSemiLattice (X A: Type) `{FJoin A} `{JoinSemiLattice A}: JoinSemiLattice (X -> A).
+Lemma PointwiseMeetFMeet `{CompleteLattice A}:
+  @FMeetMeet (X -> A) PointwiseMeet = @PointwiseFMeet (FMeetMeet A).
+Proof.
+  apply functional_extensionality. intros f.
+  apply functional_extensionality. intros g.
+  apply functional_extensionality. intros x.
+  apply antisymmetry.
+  - apply meet_glb. intros z [H__z | H__z]; subst; apply meet_glb; [ exists f | exists g ]; auto.
+  - apply meet_glb. intros z [h [[H__h | H__h] H__z]]; subst; apply meet_sl_lb.
+Qed.
+
+Program Instance PointwisePoset `{Poset A} : Poset (X -> A).
+
+Program Instance PointwiseJoinSemiLattice `{FJoin A} `{JoinSemiLattice A}: JoinSemiLattice (X -> A).
 Next Obligation.
   split.
   - intros [? ?] ?. apply join_sl_lub. auto.
   - intros H__join. split; intros x0; (transitivity (x x0 ⊔ y x0); [apply join_sl_ub | apply H__join]).
 Defined.
 
-Program Instance PointwiseMeetSemiLattice (X A: Type) `{FMeet A} `{MeetSemiLattice A}: MeetSemiLattice (X -> A).
+Program Instance PointwiseMeetSemiLattice `{FMeet A} `{MeetSemiLattice A}: MeetSemiLattice (X -> A).
 Next Obligation.
   split.
   - intros [? ?] ?. apply meet_sl_glb. auto.
   - intros H__meet. split; intros x0; (transitivity (x x0 ⊓ y x0); [apply H__meet | apply meet_sl_lb]).
-Defined.
+Qed.
 
-Program Instance PointwiseLattice (X A: Type) `{Lattice A}: Lattice (X -> A).
+Program Instance PointwiseLattice `{Lattice A}: Lattice (X -> A).
 
-Program Instance PointwiseCompleteLattice (X A: Type) `{CompleteLattice A}: CompleteLattice (X -> A).
+Program Instance PointwiseCompleteLattice `{CompleteLattice A}: CompleteLattice (X -> A).
 Next Obligation.
-  apply (@PointwiseLattice X A).
+  Set Printing Implicit.
+  rewrite PointwiseJoinFJoin.
+  rewrite PointwiseMeetFMeet.
+  apply PointwiseLattice.
+  Unset Printing Implicit.
+Defined.
+Next Obligation.
+  split.
+  - intros f H__f x. apply join_lub. exists f. auto.
+  - intros f H__f x. apply join_lub.
+    intros a [g [H__g H__a]]; subst. apply H__f. assumption.
+Qed.
+Next Obligation.
+  split.
+  - intros f H__f x. apply meet_glb. exists f. auto.
+  - intros f H__f x. apply meet_glb.
+    intros a [g [H__g H__a]]; subst. apply H__f. assumption.
+Qed.
+(* TODO: need changes in CompleteLattice definition to automaticaly solve this goal *)
+Next Obligation.
+  intros y. apply top_supremum.
+Qed.
+Next Obligation.
+  intros y. apply bottom_infimum.
+Qed.
+
+End Pointwise.
+
+Section Powerset.
+
+Context (X: Type).
+
+End Powerset.
