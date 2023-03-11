@@ -68,7 +68,7 @@ with at_stmt_list (list: stmt_list): label :=
   | stmt_list_cons s _ => at_stmt s
   end.
 
-Inductive trace_action : Type :=
+Variant trace_action : Type :=
   | TAssign (v : variable) (a : aexp) (v : value)
   | TBValid (b : bexp)
   | TBInvalid (b : bexp)
@@ -83,7 +83,7 @@ CoInductive infinite_trace: Type :=
   | infinite_trace_cons (l: label) (a : trace_action) (t : infinite_trace).
 
 (* implicitely a bi-inductive type *)
-Inductive trace: Type :=
+Variant trace: Type :=
   | finite: finite_trace -> trace
   | infinite : infinite_trace -> trace.
 
