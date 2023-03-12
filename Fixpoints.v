@@ -1,14 +1,9 @@
 From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Lattice.
+From VSA Require Import Functions.
 
 Import SetNotations.
-
-Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B}: Prop :=
-  increasing : forall x y, x ⊑ y -> f x ⊑ f y.
-
-#[export]
-Typeclasses Transparent Increasing.
 
 Definition PreFixpoints {A: Type} (f: A -> A) `{Increasing A A f}: ℘ A :=
   fun x => x ⊑ f x.
@@ -29,28 +24,28 @@ Section Tarski.
 
   Context {A: Type} `{CompleteLattice A} (f: A -> A) {I: Increasing f}.
 
-  Let lfp_tarski: A := meet (PostFixpoints f).
+  Let lfp_tarski: A := inf (PostFixpoints f).
 
   Lemma lfp_tarski_fixpoint:
     f (lfp_tarski) = lfp_tarski.
   Proof.
     assert (f lfp_tarski ⊑ lfp_tarski).
     {
-      apply meet_glb. intros x H__x.
+      apply inf_glb. intros x H__x.
       transitivity (f x); auto.
       apply increasing.
-      apply meet_glb.
+      apply inf_lb.
       assumption.
     }
     apply antisymmetry; auto.
-    apply meet_glb. apply increasing. assumption.
+    apply inf_lb. apply increasing. assumption.
   Qed.
 
   Lemma lfp_tarski_leastfixpoint:
     LowerBound (Fixpoints f) lfp_tarski.
   Proof.
     intros u H__u.
-    apply meet_glb. unfold PostFixpoints. rewrite H__u. reflexivity.
+    apply inf_lb. unfold PostFixpoints. rewrite H__u. reflexivity.
   Qed.
 
   Theorem lfp_tarski_iff:

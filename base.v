@@ -116,7 +116,8 @@ Notation "'at⟦' S ⟧" := (at_stmt S).
 Notation "'at⟦' π '⟧t'" := (at_finite_trace π).
 Notation "'after⟦' π '⟧t'" := (after_finite_trace π).
 
-Program Fixpoint concat_finite (t1 t2: finite_trace) {_: after⟦t1⟧t = at⟦t2⟧t}: finite_trace :=
+#[program]
+Fixpoint concat_finite (t1 t2: finite_trace) {_: after⟦t1⟧t ≡ at⟦t2⟧t}: finite_trace :=
   match t2 with
   | finite_trace_nil _ => t1
   | finite_trace_cons l a t2' => finite_trace_cons l a (@concat_finite t1 t2' _)
@@ -125,14 +126,16 @@ Program Fixpoint concat_finite (t1 t2: finite_trace) {_: after⟦t1⟧t = at⟦t
 Notation "t1 ⁀ t2" := (concat_finite t1 t2) (at level 40).
 Notation "π ⟶( a ) l" := (finite_trace_cons l a π) (at level 50).
 
-Program Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) {_: after⟦t1⟧t = at_infinite_trace t2}: infinite_trace :=
+#[program]
+Fixpoint concat_infinite (t1: finite_trace) (t2: infinite_trace) {_: after⟦t1⟧t ≡ at_infinite_trace t2}: infinite_trace :=
   match t1 with
   | finite_trace_nil _ => t2
   | finite_trace_cons _ a t1' =>
       @concat_infinite t1' (infinite_trace_cons after⟦t1'⟧t a t2) _
   end.
 
-Program Definition concat (t1 t2: trace) : option trace :=
+#[program]
+Definition concat (t1 t2: trace) : option trace :=
   match t1, t2 with
   | finite t1', finite t2' =>
       if Nat.eq_dec after⟦t1'⟧t at⟦t2'⟧t then Some (finite (@concat_finite t1' t2' _))
@@ -156,34 +159,35 @@ Notation "'ϱ(' π ')'" := (value_of π).
 (* l' is the label after the statement, and it is not necessarily the label at the end of the traces *)
 Inductive deductive_prefix_trace_semantics (l': label): stmt -> finite_trace -> ℘ finite_trace :=
   | dpts_stmt :
-    forall S π1, at⟦S⟧ = after⟦π1⟧t -> deductive_prefix_trace_semantics l' S π1 after⟦π1⟧t
+    forall S π1, at⟦S⟧ ≡ after⟦π1⟧t -> deductive_prefix_trace_semantics l' S π1 after⟦π1⟧t
   | dpts_assign :
     forall x a π1, deductive_prefix_trace_semantics l' (SAssign after⟦π1⟧t x a) π1 (after⟦π1⟧t ⟶(TAssign x a (A⟦a⟧ϱ(π1))) l')
   | dpts_while_false :
-    forall b S π1 π2 (H: after⟦π1⟧t = at⟦π2⟧t), after⟦π1⟧t = after⟦π2⟧t -> B⟦b⟧ϱ(@concat_finite π1 π2 H) = false ->
-      deductive_prefix_trace_semantics l' (SWhile after⟦π1⟧t b S) π1 (after⟦π1⟧t ⟶(TBInvalid b) l')
+    forall b S π1 π2 (H: after⟦π1⟧t ≡ at⟦π2⟧t), after⟦π1⟧t ≡ after⟦π2⟧t -> B⟦b⟧ϱ(@concat_finite π1 π2 H) ≡ false ->
+      deductive_prefix_trace_semantics l' (SWhile after⟦π1⟧t b S) π1 (π2 ⟶(TBInvalid b) l')
   | dpts_while_true :
-    forall b S π1 π2 π3 (H1: after⟦π1⟧t = at⟦π2⟧t) (H2: at⟦S⟧ = at⟦π3⟧t), after⟦π1⟧t = after⟦π2⟧t ->
-      B⟦b⟧ϱ(@concat_finite π1 π2 H1) = true ->
+    forall b S π1 π2 π3 (H1: after⟦π1⟧t ≡ at⟦π2⟧t) (H2: at⟦S⟧ ≡ at⟦π3⟧t), after⟦π1⟧t ≡ after⟦π2⟧t ->
+      B⟦b⟧ϱ(@concat_finite π1 π2 H1) ≡ true ->
       deductive_prefix_trace_semantics after⟦π1⟧t S ((@concat_finite π1 π2 H1) ⟶(TBValid b) at⟦S⟧) π3 ->
       deductive_prefix_trace_semantics l' (SWhile after⟦π1⟧t b S) π1 (@concat_finite (π2 ⟶(TBValid b) at⟦S⟧) π3 H2).
 
+(* TODO: find a way to express a set based on a condition *)
 Axiom F_while : (finite_trace -> ℘ finite_trace) -> (finite_trace -> ℘ finite_trace).
-Axiom wp_finite_trace_Ord : Ord (finite_trace -> ℘ finite_trace).
-Axiom wp_finite_trace_Join : Join (finite_trace -> ℘ finite_trace).
-Axiom wp_finite_trace_Meet : Meet (finite_trace -> ℘ finite_trace).
-Definition wp_finite_trace_Top : Top (finite_trace -> ℘ finite_trace) := (fun _ _ => True).
-Definition wp_finite_trace_Bottom : Bottom (finite_trace -> ℘ finite_trace) := (fun _ => ∅).
-Axiom wp_finite_trace_CompleteLattice : @CompleteLattice (finite_trace -> ℘ finite_trace) wp_finite_trace_Ord wp_finite_trace_Join wp_finite_trace_Meet (fun _ _ => True) (fun _ => ∅).
-Print wp_finite_trace_CompleteLattice.
-Definition wp_finite_trace_Poset: Lattice (finite_trace -> ℘ finite_trace) := complete_lattice_lattice wp_finite_trace_CompleteLattice.
-Axiom F_while_Increasing : @Increasing _ _ F_while wp_finite_trace_Ord wp_finite_trace_CompleteLattice.
+#[local]
+Instance finite_trace_wp_finite_trace_CompleteLattice : CompleteLattice (finite_trace -> ℘ finite_trace).
+Proof.
+  apply PointwiseCompleteLattice.
+  apply PowersetCompleteLattice.
+Defined.
+Axiom F_while_Increasing : Increasing F_while.
 
-Definition fixpoint_prefix_trace_semantics (l': label) (S: stmt) (π: finite_trace): ℘ finite_trace :=
-  let l := after⟦π⟧t in
+Definition fixpoint_prefix_trace_semantics (l': label) (S: stmt) (π1: finite_trace): ℘ finite_trace :=
+  let l := after⟦π1⟧t in
   if (Nat.eqb at⟦S⟧ l) then
     match S with
-    | SAssign _ x a => {{ finite_trace_nil l }} ∪ {{ l ⟶(TAssign x a (A⟦a⟧ϱ(π))) l' }}
+    | SAssign _ x a => {{ finite_trace_nil l }} ∪ {{ l ⟶(TAssign x a (A⟦a⟧ϱ(π1))) l' }}
+    | SWhile _ b s =>
+        {{ finite_trace_nil l }}
     | _ => {{ l }}
     end
   else

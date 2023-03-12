@@ -370,30 +370,39 @@ Section Pointwise.
 
   Context (X A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
 
+  #[export]
   Instance PointwiseEquiv: Equiv (X -> A) :=
     fun f g => forall (x: X), f x = g x.
 
+  #[export]
   Instance PointwiseOrd: Ord (X -> A) :=
     fun f g => forall (x: X), f x ⊑ g x.
 
+  #[export]
   Instance PointwiseJoin: Join (X -> A) :=
     fun f g (x: X) => f x ⊔ g x.
 
+  #[export]
   Instance PointwiseMeet: Meet (X -> A) :=
     fun f g (x: X) => f x ⊓ g x.
 
+  #[export]
   Instance PointwiseSup: Sup (X -> A) :=
     fun (S: ℘ (X -> A)) (x: X) => sup (fun a => exists f, f ∈ S /\ a = f x).
 
+  #[export]
   Instance PointwiseInf: Inf (X -> A) :=
     fun (S: ℘ (X -> A)) (x: X) => inf (fun a => exists f, f ∈ S /\ a = f x).
 
+  #[export]
   Instance PointwiseTop: Top (X -> A) :=
     fun _ => ⊤.
 
+  #[export]
   Instance PointwiseBottom: Bottom (X -> A) :=
     fun _ => ⊥.
 
+  #[export]
   Instance PointwiseEquiv_Equivalence {St: Setoid A}: Equivalence PointwiseEquiv.
   Proof.
     apply Build_Equivalence; reduce.
@@ -402,22 +411,25 @@ Section Pointwise.
     - transitivity (y x0). apply H. apply H0.
   Qed.
 
+  #[export]
   Instance PointwiseOrd_Reflexive {P: Poset A}: Reflexive PointwiseOrd.
   Proof.
     intros f x. reflexivity.
   Qed.
 
+  #[export]
   Instance PointwiseOrd_Antisymmetric {P: Poset A}: Antisymmetric (X -> A) PointwiseEquiv PointwiseOrd.
   Proof.
     intros f g H1 H2 x. apply antisymmetry; auto.
   Qed.
 
+  #[export]
   Instance PointwiseOrd_Transitive {P: Poset A}: Transitive PointwiseOrd.
   Proof.
     intros f g h H1 H2 x. transitivity (g x). apply H1. apply H2.
   Qed.
 
-  #[program]
+  #[program, export]
   Instance PointwisePoset {P: Poset A}: Poset (X -> A).
   Next Obligation.
     intros f f' H__f g g' H__g. split; intros H.
@@ -425,7 +437,7 @@ Section Pointwise.
     - intros x. cbv in H__f, H__g. rewrite H__f. rewrite H__g. apply H.
   Qed.
 
-  #[program]
+  #[program, export]
   Instance PointwiseJoinSemiLattice {JSL: JoinSemiLattice A}: JoinSemiLattice (X -> A).
   Next Obligation.
     split.
@@ -433,7 +445,7 @@ Section Pointwise.
     - intros H__join. split; intros x0; (transitivity (x x0 ⊔ y x0); [apply join_ub | apply H__join]).
   Qed.
 
-  #[program]
+  #[program, export]
   Instance PointwiseMeetSemiLattice {JSL: MeetSemiLattice A}: MeetSemiLattice (X -> A).
   Next Obligation.
     split.
@@ -441,10 +453,10 @@ Section Pointwise.
     - intros H__meet. split; intros x0; (transitivity (x x0 ⊓ y x0); [apply H__meet | apply meet_lb]).
   Qed.
 
-  #[program]
+  #[program, export]
   Instance PointwiseLattice {L: Lattice A}: Lattice (X -> A).
 
-  #[program]
+  #[program, export]
   Instance PointwiseCompleteLattice {L: CompleteLattice A}: CompleteLattice (X -> A).
   Next Obligation.
     split.
@@ -471,47 +483,55 @@ Section Powerset.
 
   Context (X: Type).
 
+  #[export]
   Instance PowersetEquiv : Equiv (℘ X) :=
     fun P Q => forall f, f ∈ P <-> f ∈ Q.
 
+  #[export]
   Instance PowersetOrd : Ord (℘ X) :=
     fun P Q => P ⊆ Q.
 
+  #[export]
   Instance PowersetJoin : Join (℘ X) :=
     fun P Q => P ∪ Q.
 
+  #[export]
   Instance PowersetMeet : Meet (℘ X) :=
     fun P Q => P ∩ Q.
 
+  #[export]
   Instance PowersetSup : Sup (℘ X) :=
     fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
 
+  #[export]
   Instance PowersetInf : Inf (℘ X) :=
     fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
 
+  #[export]
   Instance PowersetTop : Top (℘ X) :=
     fun _ => True.
 
+  #[export]
   Instance PowersetBottom : Bottom (℘ X) :=
     ∅.
 
-  #[program]
+  #[program, export]
   Instance PowersetPoset: Poset (℘ X).
   Solve All Obligations with firstorder.
 
-  #[program]
+  #[program, export]
   Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
   Solve All Obligations with firstorder.
 
-  #[program]
+  #[program, export]
   Instance PowersetJoinSemiLattice: JoinSemiLattice (℘ X).
   Solve All Obligations with firstorder.
 
-  #[program]
-  Instance PowerLattice: Lattice (℘ X).
+  #[program, export]
+  Instance PowersetLattice: Lattice (℘ X).
 
-  #[program]
-  Instance PowerCompleteLattice: CompleteLattice (℘ X).
+  #[program, export]
+  Instance PowersetCompleteLattice: CompleteLattice (℘ X).
   Solve All Obligations with firstorder.
 
 End Powerset.
