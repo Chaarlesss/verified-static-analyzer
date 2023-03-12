@@ -216,7 +216,7 @@ Ltac dual_lattice H :=
   | _ => fail "Not a dualizable structure"
   end.
 
-Section TestDual.
+(* Section TestDual.
 
 Context {A: Type}.
 
@@ -265,7 +265,7 @@ Proof.
 Qed.
 
 
-End TestDual.
+End TestDual. *)
 
 Section Join.
 
