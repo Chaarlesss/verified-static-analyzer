@@ -4,7 +4,7 @@ From VSA Require Import Lattice.
 
 Import SetNotations.
 
-Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B} :=
+Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B}: Prop :=
   increasing : forall x y, x ⊑ y -> f x ⊑ f y.
 
 #[export]
