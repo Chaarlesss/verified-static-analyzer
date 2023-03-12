@@ -24,7 +24,7 @@ Section Tarski.
 
   Context {A: Type} `{CompleteLattice A} (f: A -> A) {I: Increasing f}.
 
-  Let lfp_tarski: A := inf (PostFixpoints f).
+  Definition lfp_tarski: A := inf (PostFixpoints f).
 
   Lemma lfp_tarski_fixpoint:
     f (lfp_tarski) = lfp_tarski.

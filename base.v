@@ -2,6 +2,7 @@ From Coq Require Import Lists.List.
 From Coq Require Import Strings.String.
 From Coq Require Import Arith.
 From VSA Require Import Lattice.
+From VSA Require Import Functions.
 From VSA Require Import Fixpoints.
 
 Import SetNotations.
@@ -172,22 +173,23 @@ Inductive deductive_prefix_trace_semantics (l': label): stmt -> finite_trace -> 
       deductive_prefix_trace_semantics l' (SWhile after⟦π1⟧t b S) π1 (@concat_finite (π2 ⟶(TBValid b) at⟦S⟧) π3 H2).
 
 (* TODO: find a way to express a set based on a condition *)
-Axiom F_while : (finite_trace -> ℘ finite_trace) -> (finite_trace -> ℘ finite_trace).
+Axiom F_while : label -> bexp -> stmt -> (finite_trace -> ℘ finite_trace) -> (finite_trace -> ℘ finite_trace).
 #[local]
 Instance finite_trace_wp_finite_trace_CompleteLattice : CompleteLattice (finite_trace -> ℘ finite_trace).
 Proof.
   apply PointwiseCompleteLattice.
   apply PowersetCompleteLattice.
 Defined.
-Axiom F_while_Increasing : Increasing F_while.
+#[local]
+Instance F_while_Increasing l b S: Increasing (F_while l b S).
+Admitted.
 
 Definition fixpoint_prefix_trace_semantics (l': label) (S: stmt) (π1: finite_trace): ℘ finite_trace :=
   let l := after⟦π1⟧t in
   if (Nat.eqb at⟦S⟧ l) then
     match S with
     | SAssign _ x a => {{ finite_trace_nil l }} ∪ {{ l ⟶(TAssign x a (A⟦a⟧ϱ(π1))) l' }}
-    | SWhile _ b s =>
-        {{ finite_trace_nil l }}
+    | SWhile _ b s => lfp_tarski (F_while l b s) π1
     | _ => {{ l }}
     end
   else
