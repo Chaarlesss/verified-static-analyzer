@@ -198,9 +198,74 @@ Proof.
   - unfold bottom. apply top_supremum.
 Defined.
 
-(* TODO write the magic tactic *)
-
 End Dual.
+
+Create HintDb dual_lattice.
+
+Print DualOrder.
+Print DualPoset.
+
+#[export]
+Hint Rewrite DualPoset DualMeetSemiLattice DualJoinSemiLattice DualLattice DualCompleteLattice : dual_lattice.
+
+(* Not working for now... *)
+Ltac dual_lattice H :=
+  match H with
+  | JoinSemiLattice ?A => pose (DualJoinSemiLattice A H)
+  | MeetSemiLattice ?A => pose (DualMeetSemiLattice A H)
+  | _ => fail "Not a dualizable structure"
+  end.
+
+Section TestDual.
+
+Context {A: Type}.
+
+Lemma join_sl_ub `{JoinSemiLattice A}:
+  forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
+Proof.
+  intros. apply join_sl_lub. reflexivity.
+Qed.
+
+Local Set Printing Implicit.
+
+Lemma permut {B C} {f g: B -> B -> C}:
+  f = (fun x y => g y x) -> (fun x y => f y x) = g.
+Proof.
+  intros H. repeat (apply functional_extensionality; intros).
+  rewrite H. reflexivity.
+Qed.
+
+Lemma meet_sl_lb `{MeetSemiLattice A}:
+  forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
+Proof.
+  (*
+  remember (DualOrder A O0) as O1.
+  remember (DualFMeet A M) as J.
+  apply DualMeetSemiLattice in H.
+  rewrite <- HeqO1 in *.
+  rewrite <- HeqJ in *.
+  unfold fmeet.
+  clear M.
+  subst.*)
+
+  (** WORKING EXAMPLE **)
+  apply DualMeetSemiLattice in H.
+
+  remember (DualFMeet A M) as J.
+  cbv in HeqJ. rewrite <- HeqJ.
+  clear HeqJ. clear M.
+  unfold fmeet. fold fjoin.
+
+  remember (DualOrder A O0) as O1.
+  cbv in HeqO1. rewrite <- (permut HeqO1).
+  clear HeqO1. clear O0.
+  unfold ord. fold ord.
+
+  apply join_sl_ub.
+Qed.
+
+
+End TestDual.
 
 Section Join.
 
@@ -333,7 +398,7 @@ Proof.
   apply functional_extensionality. intros g.
   apply functional_extensionality. intros x.
   apply antisymmetry.
-  - apply join_lub. auto. intros z [h [[H__h | H__h] H__z]]; subst; apply join_sl_ub.
+  - apply join_lub. intros z [h [[H__h | H__h] H__z]]; subst; apply join_sl_ub.
   - apply join_lub. intros z [H__z | H__z]; subst; apply join_lub; [ exists f | exists g ]; auto.
 Qed.
 
