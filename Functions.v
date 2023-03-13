@@ -34,3 +34,4 @@ Class InfStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Inf A} `{Inf B}:
 
 #[export]
 Typeclasses Transparent Increasing Injective Surjective Bijective.
+

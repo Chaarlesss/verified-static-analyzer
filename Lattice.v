@@ -4,20 +4,7 @@ From Coq Require Import Setoids.Setoid.
 From Coq Require Import Classes.Morphisms.
 From Coq Require Import Classes.RelationClasses.
 
-Module SetNotations.
 
-  Notation "'℘' A" := (A -> Prop) (at level 0).
-  Notation "x ∈ P" := (P x) (at level 19, only parsing).
-  Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20). 
-  Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
-  Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
-  Notation "{{ x }}" := (fun y => y = x).
-  Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
-  Notation "∅" := (fun _ => False).
-
-End SetNotations.
-
-Import SetNotations.
 
 Declare Scope lattice.
 #[global]
@@ -42,6 +29,21 @@ Infix "≡" := eq (at level 70, no associativity) : lattice.
 Notation "(≡)" := eq (only parsing) : lattice.
 Notation "( x ≡)" := (eq x) (only parsing) : lattice.
 Notation "(≡ x )" := (fun y => eq y x) (only parsing) : lattice.
+
+Module SetNotations.
+
+  Notation "'℘' A" := (A -> Prop) (at level 0).
+  Notation "x ∈ P" := (P x) (at level 19, only parsing).
+  Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20). 
+  Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
+  Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
+  Notation "{{ x }}" := (fun y => y = x).
+  Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
+  Notation "∅" := (fun _ => False).
+
+End SetNotations.
+
+Import SetNotations.
 
 Class Setoid (A: Type) `{E: Equiv A}: Prop :=
   setoid_equiv :> Equivalence (=).
@@ -270,6 +272,24 @@ Section Join.
       * transitivity (y ⊔ z); apply join_ub.
   Qed.
 
+  Lemma join_is_right:
+    forall x y, x ⊑ y -> x ⊔ y = y.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    now apply join_lub.
+    now apply join_ub.
+  Qed.
+
+  Lemma join_is_left:
+    forall x y, y ⊑ x -> x ⊔ y = x.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    now apply join_lub.
+    now apply join_ub.
+  Qed.
+
 End Join.
 
 Section Meet.
@@ -292,6 +312,24 @@ Section Meet.
     forall x y z, x ⊓ (y ⊓ z) = (x ⊓ y) ⊓ z.
   Admitted.
 
+  Lemma meet_is_right:
+    forall x y, y ⊑ x -> x ⊓ y = y.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    apply meet_lb.
+    now apply meet_glb.
+  Qed.
+
+  Lemma meet_is_left:
+    forall x y, x ⊑ y -> x ⊓ y = x.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    now apply meet_lb.
+    now apply meet_glb.
+  Qed.
+
 End Meet.
 
 Lemma join_meet_absortive {A: Type} `{Lattice A}:
@@ -309,6 +347,65 @@ Lemma meet_join_absortive {A: Type} `{Lattice A}:
   forall x y, (x ⊓ y) ⊔ x = x.
 Admitted.
 
+
+
+Section Powerset.
+
+  Context (X: Type).
+
+  #[export]
+  Instance PowersetEquiv : Equiv (℘ X) :=
+    fun P Q => forall f, f ∈ P <-> f ∈ Q.
+
+  #[export]
+  Instance PowersetOrd : Ord (℘ X) :=
+    fun P Q => P ⊆ Q.
+
+  #[export]
+  Instance PowersetJoin : Join (℘ X) :=
+    fun P Q => P ∪ Q.
+
+  #[export]
+  Instance PowersetMeet : Meet (℘ X) :=
+    fun P Q => P ∩ Q.
+
+  #[export]
+  Instance PowersetSup : Sup (℘ X) :=
+    fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
+
+  #[export]
+  Instance PowersetInf : Inf (℘ X) :=
+    fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
+
+  #[export]
+  Instance PowersetTop : Top (℘ X) :=
+    fun _ => True.
+
+  #[export]
+  Instance PowersetBottom : Bottom (℘ X) :=
+    ∅.
+
+  #[program, export]
+  Instance PowersetPoset: Poset (℘ X).
+  Solve All Obligations with firstorder.
+
+  #[program, export]
+  Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
+  Solve All Obligations with firstorder.
+
+  #[program, export]
+  Instance PowersetJoinSemiLattice: JoinSemiLattice (℘ X).
+  Solve All Obligations with firstorder.
+
+  #[program, export]
+  Instance PowersetLattice: Lattice (℘ X).
+
+  #[program, export]
+  Instance PowersetCompleteLattice: CompleteLattice (℘ X).
+  Solve All Obligations with firstorder.
+
+End Powerset.
+
 Section Sup.
 
   Context {A: Type} `{CompleteLattice A}.
@@ -317,6 +414,59 @@ Section Sup.
     forall (S: ℘ A) x, x ∈ S -> x ⊑ sup S.
   Proof.
     intros S x H__x. destruct (sup_lub S (sup S)). firstorder.
+  Qed.
+
+  Lemma subset_sup:
+    forall X Y : ℘ A,
+      X ⊆ Y -> sup X ⊑ sup Y.
+  Proof.
+    intros X Y Hincl.
+    apply sup_lub.
+    intros x Hx%Hincl.
+    now apply sup_ub.
+  Qed.
+
+  Lemma equiv_sup:
+    forall X Y : ℘ A,
+      X = Y -> sup X = sup Y.
+  Proof.
+    intros X Y HXY.
+    apply antisymmetry;
+    apply subset_sup, HXY.
+  Qed.
+
+  #[export]
+  Instance sup_proper : Proper ((=) ==> (=)) sup := equiv_sup.
+
+  Lemma sup_union_bot:
+    forall x, sup ({{⊥}} ∪ x) = sup x.
+  Proof.
+    intros X.
+    apply antisymmetry.
+    - apply sup_lub. intros x [-> | Hx].
+      apply bottom_infimum.
+      now apply sup_ub.
+    - apply sup_lub. intros x Hx.
+      apply sup_ub. now right.
+  Qed.
+
+  Lemma sup_singleton:
+    forall x, sup {{x}} = x.
+  Proof.
+    intros X. apply antisymmetry.
+    - apply sup_lub. now intros x ->.
+    - now apply sup_ub.
+  Qed.
+
+  Lemma sup_pair:
+    forall x y, sup {{x; y}} = x ⊔ y.
+  Proof.
+    intros. apply antisymmetry.
+    - apply sup_lub.
+      intros ? [-> | ->]; apply join_ub.
+    - apply join_lub. split.
+      apply sup_ub. now left.
+      apply sup_ub. now right.
   Qed.
 
 End Sup.
@@ -479,59 +629,3 @@ Section Pointwise.
 
 End Pointwise.
 
-Section Powerset.
-
-  Context (X: Type).
-
-  #[export]
-  Instance PowersetEquiv : Equiv (℘ X) :=
-    fun P Q => forall f, f ∈ P <-> f ∈ Q.
-
-  #[export]
-  Instance PowersetOrd : Ord (℘ X) :=
-    fun P Q => P ⊆ Q.
-
-  #[export]
-  Instance PowersetJoin : Join (℘ X) :=
-    fun P Q => P ∪ Q.
-
-  #[export]
-  Instance PowersetMeet : Meet (℘ X) :=
-    fun P Q => P ∩ Q.
-
-  #[export]
-  Instance PowersetSup : Sup (℘ X) :=
-    fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
-
-  #[export]
-  Instance PowersetInf : Inf (℘ X) :=
-    fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
-
-  #[export]
-  Instance PowersetTop : Top (℘ X) :=
-    fun _ => True.
-
-  #[export]
-  Instance PowersetBottom : Bottom (℘ X) :=
-    ∅.
-
-  #[program, export]
-  Instance PowersetPoset: Poset (℘ X).
-  Solve All Obligations with firstorder.
-
-  #[program, export]
-  Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
-  Solve All Obligations with firstorder.
-
-  #[program, export]
-  Instance PowersetJoinSemiLattice: JoinSemiLattice (℘ X).
-  Solve All Obligations with firstorder.
-
-  #[program, export]
-  Instance PowersetLattice: Lattice (℘ X).
-
-  #[program, export]
-  Instance PowersetCompleteLattice: CompleteLattice (℘ X).
-  Solve All Obligations with firstorder.
-
-End Powerset.
