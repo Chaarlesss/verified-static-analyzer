@@ -1,6 +1,34 @@
-Require Import Coq.Relations.Relations.
-Require Import Coq.Classes.RelationClasses.
-Require Import Coq.Logic.FunctionalExtensionality.
+From Coq Require Import Program.Basics.
+From Coq Require Import Relations.Relations.
+From Coq Require Import Setoids.Setoid.
+From Coq Require Import Classes.Morphisms.
+From Coq Require Import Classes.RelationClasses.
+
+
+
+Declare Scope lattice.
+#[global]
+Open Scope lattice.
+
+Class Ord A := ord: relation A.
+Class Equiv A := equiv: relation A.
+#[export]
+Typeclasses Transparent Ord Equiv.
+
+Infix "⊑" := ord (at level 60, no associativity) : lattice.
+Notation "(⊑)" := ord (only parsing) : lattice.
+Notation "( X ⊑)" := (ord X) (only parsing) : lattice.
+Notation "(⊑ X )" := (fun Y => Y ⊑ X) (only parsing) : lattice.
+
+Infix "=" := equiv : type_scope.
+Notation "(=)" := equiv (only parsing) : lattice.
+Notation "( x =)" := (equiv x) (only parsing) : lattice.
+Notation "(= x )" := (fun y => equiv y x) (only parsing) : lattice.
+
+Infix "≡" := eq (at level 70, no associativity) : lattice.
+Notation "(≡)" := eq (only parsing) : lattice.
+Notation "( x ≡)" := (eq x) (only parsing) : lattice.
+Notation "(≡ x )" := (fun y => eq y x) (only parsing) : lattice.
 
 Module SetNotations.
 
@@ -17,331 +45,301 @@ End SetNotations.
 
 Import SetNotations.
 
-(* TODO: move to another file *)
-Section Sets.
+Class Setoid (A: Type) `{E: Equiv A}: Prop :=
+  setoid_equiv :> Equivalence (=).
 
-  Record SetElt {A: Type} {S: A -> Prop}: Type := {
-    elt: A;
-    witness: elt ∈ S
-  }.
-
-  Definition PairSet {A: Type} (x y: A) : ℘ A := fun u => x = u \/ y = u.
-  Definition PairSetElt {A: Type} (x y: A) := @SetElt _ (PairSet x y).
-  Definition PairSetEltFirst {A : Type} (x y: A) : PairSetElt x y :=
-     {| elt := x; witness := or_introl eq_refl |}.
-  Definition PairSetEltSecond {A : Type} (x y: A) : PairSetElt x y :=
-     {| elt := y; witness := or_intror eq_refl |}.
-
-  Lemma PairSet_id {A: Type} (x y v: A):
-    v ∈ (PairSet x y) <-> x = v \/ y = v.
-  Proof.
-    split; auto.
-  Qed.
-
-  Definition Transport {A: Type} {S T: ℘ A} (H : S ⊆ T): @SetElt _ S -> @SetElt _ T :=
-    fun s => {| elt := elt s; witness := H (elt s) (witness s) |}.
-
-End Sets.
-
-Hint Unfold PairSet: core.
-
-Declare Scope lattice.
-Global Open Scope lattice.
-
-Class Ord A := ord: relation A.
-Typeclasses Transparent Ord.
-
-Infix "⊑" := ord (at level 60, no associativity) : lattice.
-Notation "(⊑)" := ord (only parsing) : lattice.
-Notation "( X ⊑)" := (ord X) (only parsing) : lattice.
-Notation "(⊑ X )" := (fun Y => Y ⊑ X) (only parsing) : lattice.
-
-(* Parametrize over an equivalence relation ? *)
-Class Poset (A: Type) `{O: Ord A}: Prop := {
+Class Poset (A: Type) `{E: Equiv A} {O: Ord A}: Prop := {
+  poset_setoid :> Setoid A;
   poset_refl :> Reflexive (⊑);
-  poset_antisym :> Antisymmetric A eq (⊑);
-  poset_trans :> Transitive (⊑)
+  poset_antisym :> Antisymmetric A (=) (⊑);
+  poset_trans :> Transitive (⊑);
+  poset_proper :> Proper ((=) ==> (=) ==> iff) (⊑)
 }.
 
-(* TODO: TopBoundedPoset and BottomBoundedPoset *)
+#[export]
+Typeclasses Transparent Setoid.
 
 Definition UpperBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
-
 Definition LowerBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
 
-Hint Unfold UpperBound LowerBound: core.
-
-Class FMeet A := fmeet: A -> A -> A.
-Class Meet A := meet: ℘ A -> A.
-Class FJoin A := fjoin: A -> A -> A.
-Class Join A := join: ℘ A -> A.
+Class Meet A := meet: A -> A -> A.
+Class Inf A := inf: ℘ A -> A.
+Class Join A := join: A -> A -> A.
+Class Sup A := sup: ℘ A -> A.
 Class Top A := top: A.
 Class Bottom A := bottom: A.
 
-Typeclasses Transparent FMeet Meet FJoin Join Top Bottom.
+#[export]
+Typeclasses Transparent Meet Inf Join Sup Top Bottom.
 
 Notation "⊤" := top : lattice.
 Notation "⊥" := bottom : lattice.
 
-Infix "⊓" := fmeet (at level 50, no associativity) : lattice.
-Notation "(⊓)" := fmeet (only parsing) : lattice.
-Notation "( X ⊓)" := (fmeet X) (only parsing) : lattice.
+Infix "⊓" := meet (at level 50, no associativity) : lattice.
+Notation "(⊓)" := meet (only parsing) : lattice.
+Notation "( X ⊓)" := (meet X) (only parsing) : lattice.
 Notation "(⊓ X )" := (fun Y => Y ⊓ X) (only parsing) : lattice.
 
-Infix "⊔" := fjoin (at level 50, no associativity) : lattice.
-Notation "(⊔)" := fjoin (only parsing) : lattice.
-Notation "( X ⊔)" := (fjoin X) (only parsing) : lattice.
+Infix "⊔" := join (at level 50, no associativity) : lattice.
+Notation "(⊔)" := join (only parsing) : lattice.
+Notation "( X ⊔)" := (join X) (only parsing) : lattice.
 Notation "(⊔ X )" := (fun Y => Y ⊔ X) (only parsing) : lattice.
 
-Class JoinSemiLattice (A: Type) `{O: Ord A} `{J: FJoin A}: Prop := {
+Class JoinSemiLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A}: Prop := {
   join_sl_poset :> Poset A;
-  join_sl_lub: forall x y u, x ⊑ u /\ y ⊑ u <-> (x ⊔ y) ⊑ u
+  join_lub: forall x y u, x ⊑ u /\ y ⊑ u <-> (x ⊔ y) ⊑ u
 }.
 
-Class MeetSemiLattice (A: Type) `{O: Ord A} `{M: FMeet A}: Prop := {
+Class MeetSemiLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{M: Meet A}: Prop := {
   meet_sl_poset :> Poset A;
-  meet_sl_glb: forall x y u, u ⊑ x /\ u ⊑ y <-> u ⊑ (x ⊓ y)
+  meet_glb: forall x y u, u ⊑ x /\ u ⊑ y <-> u ⊑ (x ⊓ y)
 }.
 
-Class Lattice (A: Type) `{O: Ord A} `{J: FJoin A} `{M: FMeet A}: Prop := {
+Class Lattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A} `{M: Meet A}: Prop := {
   lattice_join_sl :> JoinSemiLattice A;
   lattice_meet_sl :> MeetSemiLattice A
 }.
 
-Instance FJoinJoin (A: Type) `{J: Join A}: FJoin A := fun x y => join (PairSet x y).
-
-Instance FMeetMeet (A: Type) `{J: Meet A}: FMeet A := fun x y => meet (PairSet x y).
-
-Class CompleteLattice (A: Type) `{O: Ord A} `{J: Join A} `{M: Meet A} `{T: Top A} `{B: Bottom A}: Prop := {
+Class CompleteLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A} `{M: Meet A} `{S: Sup A} `{I: Inf A} `{T: Top A} `{B: Bottom A}: Prop := {
   complete_lattice_lattice :> Lattice A;
-  join_lub: forall (S: ℘ A), UpperBound S (join S) /\ LowerBound (UpperBound S) (join S);
-  meet_glb: forall (S: ℘ A), LowerBound S (meet S) /\ UpperBound (LowerBound S) (meet S);
+  sup_lub: forall (S: ℘ A) u, (sup S) ⊑ u <-> (forall x, x ∈ S -> x ⊑ u);
+  inf_glb: forall (S: ℘ A) u, u ⊑ (inf S) <-> (forall x, x ∈ S -> u ⊑ x);
+(*  join_lub: forall (S: ℘ A), UpperBound S (join S) /\ LowerBound (UpperBound S) (join S); *)
+(*  meet_glb: forall (S: ℘ A), LowerBound S (meet S) /\ UpperBound (LowerBound S) (meet S); *)
   top_supremum: forall x, x ⊑ ⊤;
   bottom_infimum: forall x, ⊥ ⊑ x
 }.
 
+(* TODO: Compatibility lemma, spec, etc... *)
+
 Section Dual.
-Local Set Printing Implicit.
 
-Context (A: Type) {O: Ord A} {J: Join A} {M: Meet A} {T: Top A} {B: Bottom A}.
+  #[local]
+  Set Printing Implicit.
 
-Definition DualOrder: Ord A -> Ord A := (fun _ x y => ord y x).
+  Context (A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
 
-Definition DualFJoin: FJoin A -> FMeet A := id.
-Definition DualFMeet: FMeet A -> FJoin A := id.
-Definition DualJoin: Join A -> Meet A := id.
-Definition DualMeet: Meet A -> Join A := id.
-Definition DualTop: Top A -> Bottom A := id.
-Definition DualBottom: Bottom A -> Top A := id.
+  Definition DualOrder: Ord A -> Ord A := (fun _ x y => ord y x).
 
-Definition DualPoset: Poset A -> @Poset A (DualOrder O).
-  intros P.
-  apply Build_Poset; reduce.
-  - reflexivity.
-  - now apply antisymmetry.
-  - now transitivity y.
-Defined.
+  Definition DualJoin: Join A -> Meet A := id.
+  Definition DualMeet: Meet A -> Join A := id.
+  Definition DualSup: Sup A -> Inf A := id.
+  Definition DualInf: Inf A -> Sup A := id.
+  Definition DualTop: Top A -> Bottom A := id.
+  Definition DualBottom: Bottom A -> Top A := id.
 
-Definition DualMeetSemiLattice {FM: FMeet A}:
-  @MeetSemiLattice A _ FM -> @JoinSemiLattice A (DualOrder O) (DualFMeet FM).
-Proof.
-  intros MSL.
-  apply Build_JoinSemiLattice.
-  - apply DualPoset; apply MSL.
-  - unfold fjoin. apply meet_sl_glb.
-Defined.
+  #[program]
+  Instance DualPoset {P: @Poset A E O}: @Poset A E (DualOrder O).
+  Next Obligation.
+    cbv. reflexivity.
+  Qed.
+  Next Obligation.
+    cbv. intros. now apply antisymmetry.
+  Qed.
+  Next Obligation.
+    cbv. intros. now transitivity y.
+  Qed.
+  Next Obligation.
+    cbv. split; intro.
+      rewrite <- H0. rewrite <- H. assumption.
+      rewrite H0. rewrite H. assumption.
+  Qed.
 
-Definition DualJoinSemiLattice {FJ: FJoin A}:
-  @JoinSemiLattice A _ FJ -> @MeetSemiLattice A (DualOrder O) (DualFJoin FJ).
-Proof.
-  intros JSL.
-  apply Build_MeetSemiLattice.
-  - apply DualPoset; apply JSL.
-  - unfold fmeet. apply join_sl_lub.
-Defined.
+  #[program]
+  Instance DualMeetSemiLattice {MSL: MeetSemiLattice A}: @JoinSemiLattice A E (DualOrder O) (DualMeet M).
+  Next Obligation.
+    cbv. apply meet_glb.
+  Qed.
 
-Definition DualLattice {FJ: FJoin A} {FM: FMeet A}:
-  @Lattice A _ FJ FM -> @Lattice A (DualOrder O) (DualFMeet FM) (DualFJoin FJ).
-Proof.
-  intros L.
-  apply Build_Lattice.
-  - apply DualMeetSemiLattice. apply L.
-  - apply DualJoinSemiLattice. apply L.
-Defined.
+  #[program]
+  Instance DualJoinSemiLattice {JSL: JoinSemiLattice A}: @MeetSemiLattice A E (DualOrder O) (DualJoin J).
+  Next Obligation.
+    cbv. apply join_lub.
+  Qed.
 
-Lemma DualJoinFJoin:
-  @FMeetMeet A (DualJoin J) = @DualFJoin (FJoinJoin A).
-Proof.
-  apply functional_extensionality. intros x.
-  apply functional_extensionality. intros y.
-  reflexivity.
-Qed.
+  #[program]
+  Instance DualLattice {L: Lattice A}: @Lattice A E (DualOrder O) (DualMeet M) (DualJoin J).
 
-Lemma DualMeetFMeet:
-  @FJoinJoin A (DualMeet M) = @DualFMeet (FMeetMeet A).
-Proof.
-  apply functional_extensionality. intros x.
-  apply functional_extensionality. intros y.
-  reflexivity.
-Qed.
-
-Definition DualCompleteLattice:
-  CompleteLattice A ->
-    @CompleteLattice A (DualOrder O) (DualMeet M) (DualJoin J) (DualBottom B) (DualTop T).
-Proof.
-  intros L.
-  apply Build_CompleteLattice.
-  - rewrite DualJoinFJoin. rewrite DualMeetFMeet. apply DualLattice. apply L.
-  - unfold join. apply meet_glb.
-  - unfold meet. apply join_lub.
-  - unfold top. apply bottom_infimum.
-  - unfold bottom. apply top_supremum.
-Defined.
+  #[program]
+  Instance DualCompleteLattice {L: CompleteLattice A}:
+      @CompleteLattice A E (DualOrder O) (DualMeet M) (DualJoin J) (DualInf I) (DualSup S) (DualBottom B) (DualTop T).
+  Next Obligation.
+    cbv. apply inf_glb.
+  Qed.
+  Next Obligation.
+    cbv. apply sup_lub.
+  Qed.
+  Next Obligation.
+    cbv. apply bottom_infimum.
+  Qed.
+  Next Obligation.
+    cbv. apply top_supremum.
+  Qed.
 
 End Dual.
 
-Create HintDb dual_lattice.
+(* TODO: write a tactic to automaticaly transform a context into its dual context *)
+(* We should be able to add our own dual definitions (and a proof that they are indeed dual) *)
+Section TestDual.
 
-Print DualOrder.
-Print DualPoset.
+  Context {A: Type}.
+ 
+  Lemma test_dual_join_ub `{JoinSemiLattice A}:
+    forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
+  Proof.
+    intros. apply join_lub. reflexivity.
+  Qed.
 
-#[export]
-Hint Rewrite DualPoset DualMeetSemiLattice DualJoinSemiLattice DualLattice DualCompleteLattice : dual_lattice.
+  Local Set Printing Implicit.
 
-(* Not working for now... *)
-Ltac dual_lattice H :=
-  match H with
-  | JoinSemiLattice ?A => pose (DualJoinSemiLattice A H)
-  | MeetSemiLattice ?A => pose (DualMeetSemiLattice A H)
-  | _ => fail "Not a dualizable structure"
-  end.
+  Lemma test_dual_permut {B C} {f g: B -> B -> C}:
+    f ≡ (fun x y => g y x) -> (fun x y => f y x) ≡ g.
+  Proof.
+    intros H. rewrite H. reflexivity.
+  Qed.
 
-(* Section TestDual.
+  Lemma test_dual_meet_lb `{MeetSemiLattice A}:
+    forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
+  Proof.
+    (*
+    remember (DualOrder A O0) as O1.
+    remember (DualFMeet A M) as J.
+    apply DualMeetSemiLattice in H.
+    rewrite <- HeqO1 in *.
+    rewrite <- HeqJ in *.
+    unfold fmeet.
+    clear M.
+    subst.*)
 
-Context {A: Type}.
+    (** WORKING EXAMPLE **)
+    apply DualMeetSemiLattice in H.
 
-Lemma join_sl_ub `{JoinSemiLattice A}:
-  forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
-Proof.
-  intros. apply join_sl_lub. reflexivity.
-Qed.
+    remember (DualMeet A M) as J.
+    cbv in HeqJ. rewrite <- HeqJ.
+    clear HeqJ. clear M.
+    unfold meet. fold join.
 
-Local Set Printing Implicit.
+    remember (DualOrder A O0) as O1.
+    cbv in HeqO1. rewrite <- (test_dual_permut HeqO1).
+    clear HeqO1. clear O0.
+    unfold ord. fold ord.
 
-Lemma permut {B C} {f g: B -> B -> C}:
-  f = (fun x y => g y x) -> (fun x y => f y x) = g.
-Proof.
-  intros H. repeat (apply functional_extensionality; intros).
-  rewrite H. reflexivity.
-Qed.
+    apply test_dual_join_ub.
+  Qed.
 
-Lemma meet_sl_lb `{MeetSemiLattice A}:
-  forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
-Proof.
-  (*
-  remember (DualOrder A O0) as O1.
-  remember (DualFMeet A M) as J.
-  apply DualMeetSemiLattice in H.
-  rewrite <- HeqO1 in *.
-  rewrite <- HeqJ in *.
-  unfold fmeet.
-  clear M.
-  subst.*)
-
-  (** WORKING EXAMPLE **)
-  apply DualMeetSemiLattice in H.
-
-  remember (DualFMeet A M) as J.
-  cbv in HeqJ. rewrite <- HeqJ.
-  clear HeqJ. clear M.
-  unfold fmeet. fold fjoin.
-
-  remember (DualOrder A O0) as O1.
-  cbv in HeqO1. rewrite <- (permut HeqO1).
-  clear HeqO1. clear O0.
-  unfold ord. fold ord.
-
-  apply join_sl_ub.
-Qed.
-
-
-End TestDual. *)
+  End TestDual.
 
 Section Join.
 
-Context {A: Type} `{JoinSemiLattice A}.
+  Context {A: Type} `{JoinSemiLattice A}.
   
-Lemma join_sl_ub:
-  forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
-Proof.
-  intros. apply join_sl_lub. reflexivity.
-Qed.
+  Lemma join_ub:
+    forall x y, x ⊑ (x ⊔ y) /\ y ⊑ (x ⊔ y).
+  Proof.
+    intros. apply join_lub. reflexivity.
+  Qed.
 
-Lemma join_sl_idempotent:
-  forall x, x ⊔ x = x.
-Proof.
-  intros x.
-  apply poset_antisym.
-  - apply join_sl_lub. split; reflexivity.
-  - apply join_sl_ub.
-Qed.
+  Lemma join_idempotent:
+    forall x, x ⊔ x = x.
+  Proof.
+    intros x.
+    apply antisymmetry.
+    - apply join_lub. split; reflexivity.
+    - apply join_ub.
+  Qed.
 
-Lemma join_sl_comm:
-  forall x y, x ⊔ y = y ⊔ x.
-Proof.
-  intros x y.
-  apply poset_antisym; apply join_sl_lub; split; apply join_sl_ub.
-Qed.
+  Lemma join_comm:
+    forall x y, x ⊔ y = y ⊔ x.
+  Proof.
+    intros x y.
+    apply antisymmetry; apply join_lub; split; apply join_ub.
+  Qed.
 
-Lemma join_sl_assoc:
-  forall x y z, x ⊔ (y ⊔ z) = (x ⊔ y) ⊔ z.
-Proof.
-  intros x y z.
-  apply poset_antisym.
-  - apply join_sl_lub. split.
-    * transitivity (x ⊔ y); apply join_sl_ub.
-    * apply join_sl_lub. split.
-      + transitivity (x ⊔ y); apply join_sl_ub.
-      + apply join_sl_ub.
-  - apply join_sl_lub. split.
-    * apply join_sl_lub. split.
-      + apply join_sl_ub.
-      + transitivity (y ⊔ z); apply join_sl_ub.
-    * transitivity (y ⊔ z); apply join_sl_ub.
-Qed.
+  Lemma join_assoc:
+    forall x y z, x ⊔ (y ⊔ z) = (x ⊔ y) ⊔ z.
+  Proof.
+    intros x y z.
+    apply antisymmetry.
+    - apply join_lub. split.
+      * transitivity (x ⊔ y); apply join_ub.
+      * apply join_lub. split.
+        + transitivity (x ⊔ y); apply join_ub.
+        + apply join_ub.
+    - apply join_lub. split.
+      * apply join_lub. split.
+        + apply join_ub.
+        + transitivity (y ⊔ z); apply join_ub.
+      * transitivity (y ⊔ z); apply join_ub.
+  Qed.
+
+  Lemma join_is_right:
+    forall x y, x ⊑ y -> x ⊔ y = y.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    now apply join_lub.
+    now apply join_ub.
+  Qed.
+
+  Lemma join_is_left:
+    forall x y, y ⊑ x -> x ⊔ y = x.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    now apply join_lub.
+    now apply join_ub.
+  Qed.
 
 End Join.
 
 Section Meet.
 
-Context {A: Type} `{MeetSemiLattice A}.
+  Context {A: Type} `{MeetSemiLattice A}.
   
-Lemma meet_sl_lb:
-  forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
-Admitted.
+  Lemma meet_lb:
+    forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
+  Admitted.
 
-Lemma meet_sl_idempotent:
-  forall x, x ⊓ x = x.
-Admitted.
+  Lemma meet_idempotent:
+    forall x, x ⊓ x = x.
+  Admitted.
 
-Lemma meet_sl_comm:
-  forall x y, x ⊓ y = y ⊓ x.
-Admitted.
+  Lemma meet_comm:
+    forall x y, x ⊓ y = y ⊓ x.
+  Admitted.
 
-Lemma meet_sl_assoc:
-  forall x y z, x ⊓ (y ⊓ z) = (x ⊓ y) ⊓ z.
-Admitted.
+  Lemma meet_assoc:
+    forall x y z, x ⊓ (y ⊓ z) = (x ⊓ y) ⊓ z.
+  Admitted.
+
+  Lemma meet_is_right:
+    forall x y, y ⊑ x -> x ⊓ y = y.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    apply meet_lb.
+    now apply meet_glb.
+  Qed.
+
+  Lemma meet_is_left:
+    forall x y, x ⊑ y -> x ⊓ y = x.
+  Proof.
+    intros x y Hxy.
+    apply antisymmetry.
+    now apply meet_lb.
+    now apply meet_glb.
+  Qed.
 
 End Meet.
 
-Lemma join_meet_sl_absortive {A: Type} `{Lattice A}:
+Lemma join_meet_absortive {A: Type} `{Lattice A}:
   forall x y, (x ⊔ y) ⊓ x = x.
 Proof.
   intros x y.
   apply antisymmetry.
-  - apply meet_sl_lb.
-  - apply meet_sl_glb. split.
-    * apply join_sl_ub.
+  - apply meet_lb.
+  - apply meet_glb. split.
+    * apply join_ub.
     * reflexivity.
 Qed.
 
@@ -349,155 +347,285 @@ Lemma meet_join_absortive {A: Type} `{Lattice A}:
   forall x y, (x ⊓ y) ⊔ x = x.
 Admitted.
 
-Section Pointwise.
 
-Context (X A: Type).
-
-Instance PointwiseOrd `{Ord A} : Ord (X -> A) :=
-   fun f g => forall (x : X), f x ⊑ g x.
-
-Instance PointwiseFJoin `{FJoin A} : FJoin (X -> A) :=
-  fun f g (x : X) => f x ⊔ g x.
-
-Instance PointwiseFMeet `{FMeet A} : FMeet (X -> A) :=
-  fun f g (x : X) => f x ⊓ g x.
-
-Instance PointwiseJoin `{Join A} : Join (X -> A) :=
-  fun (S: ℘ (X -> A)) (x: X) => join (fun a => exists f, f ∈ S /\ a = f x).
-
-Instance PointwiseMeet `{Meet A} : Meet (X -> A) :=
-  fun (S: ℘ (X -> A)) (x: X) => meet (fun a => exists f, f ∈ S /\ a = f x).
-
-Instance PointwiseTop `{Top A} : Top (X -> A) :=
-  fun _ => ⊤.
-
-Instance PointwiseBottom `{Bottom A} : Bottom (X -> A) :=
-  fun _ => ⊥.
-
-Instance PointwiseOrd_Reflexive `{Poset A}: Reflexive PointwiseOrd.
-Proof.
-  reduce. reflexivity.
-Qed.
-
-Instance PointwiseOrd_Antisymmetric `{Poset A}: Antisymmetric (X -> A) eq PointwiseOrd.
-Proof.
-  reduce. apply functional_extensionality. intros z. apply antisymmetry; auto.
-Qed.
-
-Instance PointwiseOrd_Transitive `{Poset A}: Transitive PointwiseOrd.
-Proof.
-  reduce. transitivity (y x0). apply H0. apply H1.
-Qed.
-
-(* Our first soundness proof ! *)
-(* However, we could avoid the functional extensionality using a different equivalence *)
-Lemma PointwiseJoinFJoin `{CompleteLattice A}:
-  @FJoinJoin (X -> A) PointwiseJoin = @PointwiseFJoin (FJoinJoin A).
-Proof.
-  apply functional_extensionality. intros f.
-  apply functional_extensionality. intros g.
-  apply functional_extensionality. intros x.
-  apply antisymmetry.
-  - apply join_lub. intros z [h [[H__h | H__h] H__z]]; subst; apply join_sl_ub.
-  - apply join_lub. intros z [H__z | H__z]; subst; apply join_lub; [ exists f | exists g ]; auto.
-Qed.
-
-Lemma PointwiseMeetFMeet `{CompleteLattice A}:
-  @FMeetMeet (X -> A) PointwiseMeet = @PointwiseFMeet (FMeetMeet A).
-Proof.
-  apply functional_extensionality. intros f.
-  apply functional_extensionality. intros g.
-  apply functional_extensionality. intros x.
-  apply antisymmetry.
-  - apply meet_glb. intros z [H__z | H__z]; subst; apply meet_glb; [ exists f | exists g ]; auto.
-  - apply meet_glb. intros z [h [[H__h | H__h] H__z]]; subst; apply meet_sl_lb.
-Qed.
-
-Program Instance PointwisePoset `{Poset A} : Poset (X -> A).
-
-Program Instance PointwiseJoinSemiLattice `{FJoin A} `{JoinSemiLattice A}: JoinSemiLattice (X -> A).
-Next Obligation.
-  split.
-  - intros [? ?] ?. apply join_sl_lub. auto.
-  - intros H__join. split; intros x0; (transitivity (x x0 ⊔ y x0); [apply join_sl_ub | apply H__join]).
-Defined.
-
-Program Instance PointwiseMeetSemiLattice `{FMeet A} `{MeetSemiLattice A}: MeetSemiLattice (X -> A).
-Next Obligation.
-  split.
-  - intros [? ?] ?. apply meet_sl_glb. auto.
-  - intros H__meet. split; intros x0; (transitivity (x x0 ⊓ y x0); [apply H__meet | apply meet_sl_lb]).
-Qed.
-
-Program Instance PointwiseLattice `{Lattice A}: Lattice (X -> A).
-
-Program Instance PointwiseCompleteLattice `{CompleteLattice A}: CompleteLattice (X -> A).
-Next Obligation.
-  Local Set Printing Implicit.
-  rewrite PointwiseJoinFJoin.
-  rewrite PointwiseMeetFMeet.
-  apply PointwiseLattice.
-Defined.
-Next Obligation.
-  split.
-  - intros f H__f x. apply join_lub. exists f. auto.
-  - intros f H__f x. apply join_lub.
-    intros a [g [H__g H__a]]; subst. apply H__f. assumption.
-Qed.
-Next Obligation.
-  split.
-  - intros f H__f x. apply meet_glb. exists f. auto.
-  - intros f H__f x. apply meet_glb.
-    intros a [g [H__g H__a]]; subst. apply H__f. assumption.
-Qed.
-(* TODO: BoundedPoset *)
-Next Obligation.
-  intros y. apply top_supremum.
-Qed.
-Next Obligation.
-  intros y. apply bottom_infimum.
-Qed.
-
-End Pointwise.
 
 Section Powerset.
 
-Context (X: Type).
+  Context (X: Type).
 
-Instance PowersetOrd : Ord (℘ X) :=
-  fun P Q => P ⊆ Q.
+  #[export]
+  Instance PowersetEquiv : Equiv (℘ X) :=
+    fun P Q => forall f, f ∈ P <-> f ∈ Q.
 
-Instance PowersetFJoin : FJoin (℘ X) :=
-  fun P Q => P ∪ Q.
+  #[export]
+  Instance PowersetOrd : Ord (℘ X) :=
+    fun P Q => P ⊆ Q.
 
-Instance PowersetJoin : Join (℘ X) :=
-  fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
+  #[export]
+  Instance PowersetJoin : Join (℘ X) :=
+    fun P Q => P ∪ Q.
 
-Instance PowersetFMeet : FMeet (℘ X) :=
-  fun P Q => P ∩ Q.
+  #[export]
+  Instance PowersetMeet : Meet (℘ X) :=
+    fun P Q => P ∩ Q.
 
-Instance PowersetMeet : Meet (℘ X) :=
-  fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S /\ x ∈ P.
+  #[export]
+  Instance PowersetSup : Sup (℘ X) :=
+    fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
 
-Instance PowersetTop : Top (℘ X) :=
-  fun _ => True.
+  #[export]
+  Instance PowersetInf : Inf (℘ X) :=
+    fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
 
-Instance PowersetBottom : Bottom (℘ X) :=
-  ∅.
+  #[export]
+  Instance PowersetTop : Top (℘ X) :=
+    fun _ => True.
 
-Instance PowersetOrd_Reflexive : Reflexive PowersetOrd.
-Proof.
-  reduce. assumption.
-Qed.
+  #[export]
+  Instance PowersetBottom : Bottom (℘ X) :=
+    ∅.
 
-Instance PowsetOrd_Antisymmetric : Antisymmetric (℘ X) eq PowersetOrd.
-Proof.
-  (* Need to define custom equivalence *)
-Admitted.
+  #[program, export]
+  Instance PowersetPoset: Poset (℘ X).
+  Solve All Obligations with firstorder.
 
-Instance PowersetOrd_Transitive: Transitive PowersetOrd.
-Proof.
-  reduce. auto.
-Qed.
+  #[program, export]
+  Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
+  Solve All Obligations with firstorder.
+
+  #[program, export]
+  Instance PowersetJoinSemiLattice: JoinSemiLattice (℘ X).
+  Solve All Obligations with firstorder.
+
+  #[program, export]
+  Instance PowersetLattice: Lattice (℘ X).
+
+  #[program, export]
+  Instance PowersetCompleteLattice: CompleteLattice (℘ X).
+  Solve All Obligations with firstorder.
 
 End Powerset.
+
+Section Sup.
+
+  Context {A: Type} `{CompleteLattice A}.
+
+  Lemma sup_ub:
+    forall (S: ℘ A) x, x ∈ S -> x ⊑ sup S.
+  Proof.
+    intros S x H__x. destruct (sup_lub S (sup S)). firstorder.
+  Qed.
+
+  Lemma subset_sup:
+    forall X Y : ℘ A,
+      X ⊆ Y -> sup X ⊑ sup Y.
+  Proof.
+    intros X Y Hincl.
+    apply sup_lub.
+    intros x Hx%Hincl.
+    now apply sup_ub.
+  Qed.
+
+  Lemma equiv_sup:
+    forall X Y : ℘ A,
+      X = Y -> sup X = sup Y.
+  Proof.
+    intros X Y HXY.
+    apply antisymmetry;
+    apply subset_sup, HXY.
+  Qed.
+
+  #[export]
+  Instance sup_proper : Proper ((=) ==> (=)) sup := equiv_sup.
+
+  Lemma sup_union_bot:
+    forall x, sup ({{⊥}} ∪ x) = sup x.
+  Proof.
+    intros X.
+    apply antisymmetry.
+    - apply sup_lub. intros x [-> | Hx].
+      apply bottom_infimum.
+      now apply sup_ub.
+    - apply sup_lub. intros x Hx.
+      apply sup_ub. now right.
+  Qed.
+
+  Lemma sup_singleton:
+    forall x, sup {{x}} = x.
+  Proof.
+    intros X. apply antisymmetry.
+    - apply sup_lub. now intros x ->.
+    - now apply sup_ub.
+  Qed.
+
+  Lemma sup_pair:
+    forall x y, sup {{x; y}} = x ⊔ y.
+  Proof.
+    intros. apply antisymmetry.
+    - apply sup_lub.
+      intros ? [-> | ->]; apply join_ub.
+    - apply join_lub. split.
+      apply sup_ub. now left.
+      apply sup_ub. now right.
+  Qed.
+
+End Sup.
+
+Section Inf.
+
+  Context {A: Type} `{CompleteLattice A}.
+
+  Lemma inf_lb:
+    forall (S: ℘ A) x, x ∈ S -> inf S ⊑ x.
+  Admitted.
+
+End Inf.
+
+Section PropLattice.
+
+  Instance PropEquiv: Equiv Prop := iff.
+  Instance PropOrd: Ord Prop := impl.
+  Instance PropJoin: Join Prop := or.
+  Instance PropMeet: Meet Prop := and.
+  Instance PropSup: Sup Prop := fun (S: ℘ Prop) => exists f, f ∈ S /\ f.
+  Instance PropInf: Inf Prop := fun (S: ℘ Prop) => forall f, f ∈ S -> f.
+  Instance PropTop: Top Prop := True.
+  Instance PropBottom: Bottom Prop := False.
+
+  #[program]
+  Instance PropSetoid: Setoid Prop.
+
+  #[program]
+  Instance PropPoset: Poset Prop.
+  Solve All Obligations with firstorder.
+
+  #[program]
+  Instance PropJoinSemiLattice: JoinSemiLattice Prop.
+  Solve All Obligations with firstorder.
+
+  #[program]
+  Instance PropMeetSemiLattice: MeetSemiLattice Prop.
+  Solve All Obligations with firstorder.
+
+  #[program]
+  Instance PropLattice: Lattice Prop.
+
+  #[program]
+  Instance PropCompleteLattice: CompleteLattice Prop.
+  Solve All Obligations with firstorder.
+
+End PropLattice.
+
+Section Pointwise.
+
+  Context (X A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
+
+  #[export]
+  Instance PointwiseEquiv: Equiv (X -> A) :=
+    fun f g => forall (x: X), f x = g x.
+
+  #[export]
+  Instance PointwiseOrd: Ord (X -> A) :=
+    fun f g => forall (x: X), f x ⊑ g x.
+
+  #[export]
+  Instance PointwiseJoin: Join (X -> A) :=
+    fun f g (x: X) => f x ⊔ g x.
+
+  #[export]
+  Instance PointwiseMeet: Meet (X -> A) :=
+    fun f g (x: X) => f x ⊓ g x.
+
+  #[export]
+  Instance PointwiseSup: Sup (X -> A) :=
+    fun (S: ℘ (X -> A)) (x: X) => sup (fun a => exists f, f ∈ S /\ a = f x).
+
+  #[export]
+  Instance PointwiseInf: Inf (X -> A) :=
+    fun (S: ℘ (X -> A)) (x: X) => inf (fun a => exists f, f ∈ S /\ a = f x).
+
+  #[export]
+  Instance PointwiseTop: Top (X -> A) :=
+    fun _ => ⊤.
+
+  #[export]
+  Instance PointwiseBottom: Bottom (X -> A) :=
+    fun _ => ⊥.
+
+  #[export]
+  Instance PointwiseEquiv_Equivalence {St: Setoid A}: Equivalence PointwiseEquiv.
+  Proof.
+    apply Build_Equivalence; reduce.
+    - reflexivity.
+    - symmetry. apply H.
+    - transitivity (y x0). apply H. apply H0.
+  Qed.
+
+  #[export]
+  Instance PointwiseOrd_Reflexive {P: Poset A}: Reflexive PointwiseOrd.
+  Proof.
+    intros f x. reflexivity.
+  Qed.
+
+  #[export]
+  Instance PointwiseOrd_Antisymmetric {P: Poset A}: Antisymmetric (X -> A) PointwiseEquiv PointwiseOrd.
+  Proof.
+    intros f g H1 H2 x. apply antisymmetry; auto.
+  Qed.
+
+  #[export]
+  Instance PointwiseOrd_Transitive {P: Poset A}: Transitive PointwiseOrd.
+  Proof.
+    intros f g h H1 H2 x. transitivity (g x). apply H1. apply H2.
+  Qed.
+
+  #[program, export]
+  Instance PointwisePoset {P: Poset A}: Poset (X -> A).
+  Next Obligation.
+    intros f f' H__f g g' H__g. split; intros H.
+    - intros x. cbv in H__f, H__g. rewrite <- H__f. rewrite <- H__g. apply H.
+    - intros x. cbv in H__f, H__g. rewrite H__f. rewrite H__g. apply H.
+  Qed.
+
+  #[program, export]
+  Instance PointwiseJoinSemiLattice {JSL: JoinSemiLattice A}: JoinSemiLattice (X -> A).
+  Next Obligation.
+    split.
+    - intros [? ?] ?. apply join_lub. auto.
+    - intros H__join. split; intros x0; (transitivity (x x0 ⊔ y x0); [apply join_ub | apply H__join]).
+  Qed.
+
+  #[program, export]
+  Instance PointwiseMeetSemiLattice {JSL: MeetSemiLattice A}: MeetSemiLattice (X -> A).
+  Next Obligation.
+    split.
+    - intros [? ?] ?. apply meet_glb. auto.
+    - intros H__meet. split; intros x0; (transitivity (x x0 ⊓ y x0); [apply H__meet | apply meet_lb]).
+  Qed.
+
+  #[program, export]
+  Instance PointwiseLattice {L: Lattice A}: Lattice (X -> A).
+
+  #[program, export]
+  Instance PointwiseCompleteLattice {L: CompleteLattice A}: CompleteLattice (X -> A).
+  Next Obligation.
+    split.
+    - intros H f H__f x. transitivity (sup S0 x); auto.
+      apply sup_ub. exists f. split; auto. reflexivity.
+    - intros H x. apply sup_lub. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
+  Qed.
+  Next Obligation.
+    split.
+    - intros H f H__f x. transitivity (inf S0 x); auto.
+      apply inf_lb. exists f. split; auto. reflexivity.
+    - intros H x. apply inf_glb. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
+  Qed.
+  Next Obligation.
+    intros y. apply top_supremum.
+  Qed.
+  Next Obligation.
+    intros y. apply bottom_infimum.
+  Qed.
+
+End Pointwise.
+
