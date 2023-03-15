@@ -1,5 +1,6 @@
 From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
+From VSA Require Import Basics.
 From VSA Require Import Lattice.
 
 Import SetNotations.
@@ -19,6 +20,9 @@ Class Surjective {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B}: Prop :=
 Class Bijective {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B}: Prop :=
   bijective : exists (g: B -> A), (forall x, g (f x) = x) /\ (forall y, f (g y) = y).
 
+#[export]
+Typeclasses Transparent Increasing Injective Surjective Bijective.
+
 Class JoinStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Join A} `{Join B}: Prop :=
   join_strict : forall x y, f (x ⊔ y) = f x ⊔ f y.
 
@@ -33,4 +37,4 @@ Class InfStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Inf A} `{Inf B}:
   inf_strict : forall (S: ℘ A), f (inf S) = inf (image f S).
 
 #[export]
-Typeclasses Transparent Increasing Injective Surjective Bijective.
+Typeclasses Transparent JoinStrict MeetStrict SupStrict InfStrict.

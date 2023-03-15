@@ -1,5 +1,6 @@
 From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
+From VSA Require Import Basics.
 From VSA Require Import Lattice.
 From VSA Require Import Functions.
 

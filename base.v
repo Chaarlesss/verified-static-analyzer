@@ -1,6 +1,7 @@
 From Coq Require Import Lists.List.
 From Coq Require Import Strings.String.
 From Coq Require Import Arith.
+From VSA Require Import Basics.
 From VSA Require Import Lattice.
 From VSA Require Import Functions.
 From VSA Require Import Fixpoints.
@@ -174,6 +175,7 @@ Inductive deductive_prefix_trace_semantics (l': label): stmt -> finite_trace -> 
 
 (* TODO: find a way to express a set based on a condition *)
 Axiom F_while : label -> bexp -> stmt -> (finite_trace -> ℘ finite_trace) -> (finite_trace -> ℘ finite_trace).
+Instance finite_trace_Equiv: Equiv finite_trace := eq.
 #[local]
 Instance finite_trace_wp_finite_trace_CompleteLattice : CompleteLattice (finite_trace -> ℘ finite_trace).
 Proof.

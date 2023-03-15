@@ -3,62 +3,9 @@ From Coq Require Import Relations.Relations.
 From Coq Require Import Setoids.Setoid.
 From Coq Require Import Classes.Morphisms.
 From Coq Require Import Classes.RelationClasses.
-
-Module SetNotations.
-
-  Notation "'℘' A" := (A -> Prop) (at level 0).
-  Notation "x ∈ P" := (P x) (at level 19, only parsing).
-  Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20). 
-  Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
-  Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
-  Notation "{{ x }}" := (fun y => y = x).
-  Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
-  Notation "∅" := (fun _ => False).
-
-End SetNotations.
+From VSA Require Import Basics.
 
 Import SetNotations.
-
-Declare Scope lattice.
-#[global]
-Open Scope lattice.
-
-Class Ord A := ord: relation A.
-Class Equiv A := equiv: relation A.
-#[export]
-Typeclasses Transparent Ord Equiv.
-
-Infix "⊑" := ord (at level 60, no associativity) : lattice.
-Notation "(⊑)" := ord (only parsing) : lattice.
-Notation "( X ⊑)" := (ord X) (only parsing) : lattice.
-Notation "(⊑ X )" := (fun Y => Y ⊑ X) (only parsing) : lattice.
-
-Infix "=" := equiv : type_scope.
-Notation "(=)" := equiv (only parsing) : lattice.
-Notation "( x =)" := (equiv x) (only parsing) : lattice.
-Notation "(= x )" := (fun y => equiv y x) (only parsing) : lattice.
-
-Infix "≡" := eq (at level 70, no associativity) : lattice.
-Notation "(≡)" := eq (only parsing) : lattice.
-Notation "( x ≡)" := (eq x) (only parsing) : lattice.
-Notation "(≡ x )" := (fun y => eq y x) (only parsing) : lattice.
-
-Class Setoid (A: Type) `{E: Equiv A}: Prop :=
-  setoid_equiv :> Equivalence (=).
-
-Class Poset (A: Type) `{E: Equiv A} {O: Ord A}: Prop := {
-  poset_setoid :> Setoid A;
-  poset_refl :> Reflexive (⊑);
-  poset_antisym :> Antisymmetric A (=) (⊑);
-  poset_trans :> Transitive (⊑);
-  poset_proper :> Proper ((=) ==> (=) ==> iff) (⊑)
-}.
-
-#[export]
-Typeclasses Transparent Setoid.
-
-Definition UpperBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
-Definition LowerBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
 
 Class Meet A := meet: A -> A -> A.
 Class Inf A := inf: ℘ A -> A.
@@ -70,18 +17,18 @@ Class Bottom A := bottom: A.
 #[export]
 Typeclasses Transparent Meet Inf Join Sup Top Bottom.
 
-Notation "⊤" := top : lattice.
-Notation "⊥" := bottom : lattice.
+Notation "⊤" := top : vsa.
+Notation "⊥" := bottom : vsa.
 
-Infix "⊓" := meet (at level 50, no associativity) : lattice.
-Notation "(⊓)" := meet (only parsing) : lattice.
-Notation "( X ⊓)" := (meet X) (only parsing) : lattice.
-Notation "(⊓ X )" := (fun Y => Y ⊓ X) (only parsing) : lattice.
+Infix "⊓" := meet (at level 50, no associativity) : vsa.
+Notation "(⊓)" := meet (only parsing) : vsa.
+Notation "( X ⊓)" := (meet X) (only parsing) : vsa.
+Notation "(⊓ X )" := (fun Y => Y ⊓ X) (only parsing) : vsa.
 
-Infix "⊔" := join (at level 50, no associativity) : lattice.
-Notation "(⊔)" := join (only parsing) : lattice.
-Notation "( X ⊔)" := (join X) (only parsing) : lattice.
-Notation "(⊔ X )" := (fun Y => Y ⊔ X) (only parsing) : lattice.
+Infix "⊔" := join (at level 50, no associativity) : vsa.
+Notation "(⊔)" := join (only parsing) : vsa.
+Notation "( X ⊔)" := (join X) (only parsing) : vsa.
+Notation "(⊔ X )" := (fun Y => Y ⊔ X) (only parsing) : vsa.
 
 Class JoinSemiLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A}: Prop := {
   join_sl_poset :> Poset A;
@@ -117,62 +64,44 @@ Section Dual.
 
   Context (A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
 
-  Definition DualOrder: Ord A -> Ord A := (fun _ x y => ord y x).
+  Definition DualJoin: Meet A := J.
+  Definition DualMeet: Join A := M.
+  Definition DualSup: Inf A := S.
+  Definition DualInf: Sup A := I.
+  Definition DualTop: Bottom A := T.
+  Definition DualBottom: Top A := B.
 
-  Definition DualJoin: Join A -> Meet A := id.
-  Definition DualMeet: Meet A -> Join A := id.
-  Definition DualSup: Sup A -> Inf A := id.
-  Definition DualInf: Inf A -> Sup A := id.
-  Definition DualTop: Top A -> Bottom A := id.
-  Definition DualBottom: Bottom A -> Top A := id.
+  Definition DualMeetSemiLattice {MSL: MeetSemiLattice A}: @JoinSemiLattice A E (DualOrd A) DualMeet.
+  Proof.
+    apply Build_JoinSemiLattice.
+    - apply DualPoset. apply MSL.
+    - cbv. apply meet_glb.
+  Defined.
 
-  #[program]
-  Instance DualPoset {P: @Poset A E O}: @Poset A E (DualOrder O).
-  Next Obligation.
-    cbv. reflexivity.
-  Qed.
-  Next Obligation.
-    cbv. intros. now apply antisymmetry.
-  Qed.
-  Next Obligation.
-    cbv. intros. now transitivity y.
-  Qed.
-  Next Obligation.
-    cbv. split; intro.
-      rewrite <- H0. rewrite <- H. assumption.
-      rewrite H0. rewrite H. assumption.
-  Qed.
+  Definition DualJoinSemiLattice {JSL: JoinSemiLattice A}: @MeetSemiLattice A E (DualOrd A) DualJoin.
+  Proof.
+    apply Build_MeetSemiLattice.
+    - apply DualPoset. apply JSL.
+    - cbv. apply join_lub.
+  Defined.
 
-  #[program]
-  Instance DualMeetSemiLattice {MSL: MeetSemiLattice A}: @JoinSemiLattice A E (DualOrder O) (DualMeet M).
-  Next Obligation.
-    cbv. apply meet_glb.
-  Qed.
+  Definition DualLattice {L: Lattice A}: @Lattice A E (DualOrd A) DualMeet DualJoin.
+  Proof.
+    apply Build_Lattice.
+    - apply DualMeetSemiLattice.
+    - apply DualJoinSemiLattice.
+  Defined.
 
-  #[program]
-  Instance DualJoinSemiLattice {JSL: JoinSemiLattice A}: @MeetSemiLattice A E (DualOrder O) (DualJoin J).
-  Next Obligation.
-    cbv. apply join_lub.
-  Qed.
-
-  #[program]
-  Instance DualLattice {L: Lattice A}: @Lattice A E (DualOrder O) (DualMeet M) (DualJoin J).
-
-  #[program]
-  Instance DualCompleteLattice {L: CompleteLattice A}:
-      @CompleteLattice A E (DualOrder O) (DualMeet M) (DualJoin J) (DualInf I) (DualSup S) (DualBottom B) (DualTop T).
-  Next Obligation.
-    cbv. apply inf_glb.
-  Qed.
-  Next Obligation.
-    cbv. apply sup_lub.
-  Qed.
-  Next Obligation.
-    cbv. apply bottom_infimum.
-  Qed.
-  Next Obligation.
-    cbv. apply top_supremum.
-  Qed.
+  Definition DualCompleteLattice {L: CompleteLattice A}:
+      @CompleteLattice A E (DualOrd A) DualMeet DualJoin DualInf DualSup DualBottom DualTop.
+  Proof.
+    apply Build_CompleteLattice.
+    - apply DualLattice.
+    - cbv. apply inf_glb.
+    - cbv. apply sup_lub.
+    - cbv. apply bottom_infimum.
+    - cbv. apply top_supremum.
+  Defined.
 
 End Dual.
 
@@ -199,25 +128,15 @@ Section TestDual.
   Lemma test_dual_meet_lb `{MeetSemiLattice A}:
     forall x y, (x ⊓ y) ⊑ x /\ (x ⊓ y) ⊑ y.
   Proof.
-    (*
-    remember (DualOrder A O0) as O1.
-    remember (DualFMeet A M) as J.
-    apply DualMeetSemiLattice in H.
-    rewrite <- HeqO1 in *.
-    rewrite <- HeqJ in *.
-    unfold fmeet.
-    clear M.
-    subst.*)
-
     (** WORKING EXAMPLE **)
     apply DualMeetSemiLattice in H.
 
-    remember (DualMeet A M) as J.
+    remember (DualMeet A) as J.
     cbv in HeqJ. rewrite <- HeqJ.
     clear HeqJ. clear M.
     unfold meet. fold join.
 
-    remember (DualOrder A O0) as O1.
+    remember (DualOrd A) as O1.
     cbv in HeqO1. rewrite <- (test_dual_permut HeqO1).
     clear HeqO1. clear O0.
     unfold ord. fold ord.
@@ -333,21 +252,12 @@ End Inf.
 
 Section PropLattice.
 
-  Instance PropEquiv: Equiv Prop := iff.
-  Instance PropOrd: Ord Prop := impl.
   Instance PropJoin: Join Prop := or.
   Instance PropMeet: Meet Prop := and.
   Instance PropSup: Sup Prop := fun (S: ℘ Prop) => exists f, f ∈ S /\ f.
   Instance PropInf: Inf Prop := fun (S: ℘ Prop) => forall f, f ∈ S -> f.
   Instance PropTop: Top Prop := True.
   Instance PropBottom: Bottom Prop := False.
-
-  #[program]
-  Instance PropSetoid: Setoid Prop.
-
-  #[program]
-  Instance PropPoset: Poset Prop.
-  Solve All Obligations with firstorder.
 
   #[program]
   Instance PropJoinSemiLattice: JoinSemiLattice Prop.
@@ -369,14 +279,6 @@ End PropLattice.
 Section Pointwise.
 
   Context (X A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
-
-  #[export]
-  Instance PointwiseEquiv: Equiv (X -> A) :=
-    fun f g => forall (x: X), f x = g x.
-
-  #[export]
-  Instance PointwiseOrd: Ord (X -> A) :=
-    fun f g => forall (x: X), f x ⊑ g x.
 
   #[export]
   Instance PointwiseJoin: Join (X -> A) :=
@@ -401,41 +303,6 @@ Section Pointwise.
   #[export]
   Instance PointwiseBottom: Bottom (X -> A) :=
     fun _ => ⊥.
-
-  #[export]
-  Instance PointwiseEquiv_Equivalence {St: Setoid A}: Equivalence PointwiseEquiv.
-  Proof.
-    apply Build_Equivalence; reduce.
-    - reflexivity.
-    - symmetry. apply H.
-    - transitivity (y x0). apply H. apply H0.
-  Qed.
-
-  #[export]
-  Instance PointwiseOrd_Reflexive {P: Poset A}: Reflexive PointwiseOrd.
-  Proof.
-    intros f x. reflexivity.
-  Qed.
-
-  #[export]
-  Instance PointwiseOrd_Antisymmetric {P: Poset A}: Antisymmetric (X -> A) PointwiseEquiv PointwiseOrd.
-  Proof.
-    intros f g H1 H2 x. apply antisymmetry; auto.
-  Qed.
-
-  #[export]
-  Instance PointwiseOrd_Transitive {P: Poset A}: Transitive PointwiseOrd.
-  Proof.
-    intros f g h H1 H2 x. transitivity (g x). apply H1. apply H2.
-  Qed.
-
-  #[program, export]
-  Instance PointwisePoset {P: Poset A}: Poset (X -> A).
-  Next Obligation.
-    intros f f' H__f g g' H__g. split; intros H.
-    - intros x. cbv in H__f, H__g. rewrite <- H__f. rewrite <- H__g. apply H.
-    - intros x. cbv in H__f, H__g. rewrite H__f. rewrite H__g. apply H.
-  Qed.
 
   #[program, export]
   Instance PointwiseJoinSemiLattice {JSL: JoinSemiLattice A}: JoinSemiLattice (X -> A).
@@ -484,14 +351,6 @@ Section Powerset.
   Context (X: Type).
 
   #[export]
-  Instance PowersetEquiv : Equiv (℘ X) :=
-    fun P Q => forall f, f ∈ P <-> f ∈ Q.
-
-  #[export]
-  Instance PowersetOrd : Ord (℘ X) :=
-    fun P Q => P ⊆ Q.
-
-  #[export]
   Instance PowersetJoin : Join (℘ X) :=
     fun P Q => P ∪ Q.
 
@@ -514,10 +373,6 @@ Section Powerset.
   #[export]
   Instance PowersetBottom : Bottom (℘ X) :=
     ∅.
-
-  #[program, export]
-  Instance PowersetPoset: Poset (℘ X).
-  Solve All Obligations with firstorder.
 
   #[program, export]
   Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
