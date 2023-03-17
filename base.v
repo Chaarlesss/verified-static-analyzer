@@ -3,6 +3,7 @@ From Coq Require Import Strings.String.
 From Coq Require Import Arith.
 From VSA Require Import Basics.
 From VSA Require Import Lattice.
+From VSA Require Import LatticeProperties.
 From VSA Require Import Functions.
 From VSA Require Import Fixpoints.
 

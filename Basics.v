@@ -28,17 +28,6 @@ Notation "(≡)" := eq (only parsing) : vsa.
 Notation "( x ≡)" := (eq x) (only parsing) : vsa.
 Notation "(≡ x )" := (fun y => eq y x) (only parsing) : vsa.
 
-Class Setoid (A: Type) `{E: Equiv A}: Prop :=
-  setoid_equiv :> Equivalence (=).
-
-Class Poset (A: Type) `{E: Equiv A} {O: Ord A}: Prop := {
-  poset_setoid :> Setoid A;
-  poset_refl :> Reflexive (⊑);
-  poset_antisym :> Antisymmetric A (=) (⊑);
-  poset_trans :> Transitive (⊑);
-  poset_proper :> Proper ((=) ==> (=) ==> iff) (⊑)
-}.
-
 Module SetNotations.
 
   Notation "'℘' A" := (A -> Prop) (at level 0).
@@ -53,6 +42,29 @@ Module SetNotations.
 End SetNotations.
 
 Import SetNotations.
+
+Class SgOp A := sg_op: A -> A -> A.
+Class SgSetOp A := sg_set_op: ℘ A -> A.
+Class MonUnit A := mon_unit: A.
+
+#[export]
+Typeclasses Transparent SgOp SgSetOp MonUnit.
+
+Infix "&" := sg_op (at level 50, left associativity) : vsa.
+Notation "(&)" := sg_op (only parsing) : vsa.
+Notation "( x &)" := (sg_op x) (only parsing) : vsa.
+Notation "(& x )" := (fun y => y & x) (only parsing) : vsa.
+
+Class Setoid (A: Type) `{E: Equiv A}: Prop :=
+  setoid_equiv :> Equivalence (=).
+
+Class Poset (A: Type) `{E: Equiv A} {O: Ord A}: Prop := {
+  poset_setoid :> Setoid A;
+  poset_refl :> Reflexive (⊑);
+  poset_antisym :> Antisymmetric A (=) (⊑);
+  poset_trans :> Transitive (⊑);
+  poset_proper :> Proper ((=) ==> (=) ==> iff) (⊑)
+}.
 
 Definition UpperBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
 Definition LowerBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.

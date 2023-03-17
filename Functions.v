@@ -1,7 +1,6 @@
 From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Basics.
-From VSA Require Import Lattice.
 
 Import SetNotations.
 
@@ -23,18 +22,11 @@ Class Bijective {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B}: Prop :=
 #[export]
 Typeclasses Transparent Increasing Injective Surjective Bijective.
 
-Class JoinStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Join A} `{Join B}: Prop :=
-  join_strict : forall x y, f (x ⊔ y) = f x ⊔ f y.
+Class Strict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{SgOp A} `{SgOp B}: Prop :=
+  strict : forall x y, f (x & y) = f x & f y.
 
-Class MeetStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Meet A} `{Meet B}: Prop :=
-  meet_strict : forall x y, f (x ⊓ y) = f x ⊓ f y.
-
-(* TODO: split these defitions to consider non-empty sup strict and infimum strict *)
-Class SupStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Sup A} `{Sup B}: Prop :=
-  sup_strict : forall (S: ℘ A), f (sup S) = sup (image f S).
-
-Class InfStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{Inf A} `{Inf B}: Prop :=
-  inf_strict : forall (S: ℘ A), f (inf S) = inf (image f S).
+Class SetStrict {A B: Type} (f: A -> B) `{Equiv A} `{Equiv B} `{SgSetOp A} `{SgSetOp B}: Prop :=
+  set_strict : forall (S: ℘ A), f (sg_set_op S) = sg_set_op (image f S).
 
 #[export]
-Typeclasses Transparent JoinStrict MeetStrict SupStrict InfStrict.
+Typeclasses Transparent Strict SetStrict.

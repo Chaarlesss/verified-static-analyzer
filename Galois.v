@@ -1,7 +1,10 @@
 From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
+From VSA Require Import Basics.
 From VSA Require Import Lattice.
 From VSA Require Import Functions.
+
+Import SetNotations.
 
 Class Abstr A C := alpha : C -> A.
 Class Concr C A := gamma : A -> C.
@@ -9,10 +12,10 @@ Class Concr C A := gamma : A -> C.
 #[export]
 Typeclasses Transparent Abstr Concr.
 
-Notation "'α' c" := (alpha c) (at level 20) : lattice.
-Notation "'(α)'" := alpha (only parsing) : lattice.
-Notation "'γ' c" := (gamma c) (at level 20) : lattice.
-Notation "'(γ)'" := gamma (only parsing) : lattice.
+Notation "'α' c" := (alpha c) (at level 20) : vsa.
+Notation "'(α)'" := alpha (only parsing) : vsa.
+Notation "'γ' c" := (gamma c) (at level 20) : vsa.
+Notation "'(γ)'" := gamma (only parsing) : vsa.
 
 Class GaloisConnection (A C: Type) `{PA: Poset A} `{PC: Poset C} (Ab: Abstr A C) (Co: Concr C A): Prop := {
   gc_poset_concr :> Poset C;
