@@ -35,6 +35,7 @@ Module SetNotations.
   Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20).
   Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
   Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
+  Notation "¬ P" := (fun x => ~ (x ∈ P)) (at level 18).
   Notation "{{ x }}" := (fun y => y = x).
   Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
   Notation "∅" := (fun _ => False).

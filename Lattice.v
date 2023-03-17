@@ -4,6 +4,7 @@ From Coq Require Import Setoids.Setoid.
 From Coq Require Import Classes.Morphisms.
 From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Basics.
+From VSA Require Import Functions.
 
 Import SetNotations.
 
@@ -54,6 +55,24 @@ Class CompleteLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A} `{M: Meet
   top_supremum: forall x, x ⊑ ⊤;
   bottom_infimum: forall x, ⊥ ⊑ x
 }.
+
+Definition PreserveJoin {A B: Type} (f: A -> B) `{Equiv B} `{JA: Join A} `{JB: Join B}: Prop :=
+  PreserveSgOp f JA JB.
+
+Definition PreserveMeet {A B: Type} (f: A -> B) `{Equiv B} `{MA: Meet A} `{MB: Meet B}: Prop :=
+  PreserveSgOp f MA MB.
+
+Definition PreserveTop {A B: Type} (f: A -> B) `{Equiv B} `{TA: Top A} `{TB: Top B}: Prop :=
+  f ⊤ = ⊤.
+
+Definition PreserveBottom {A B: Type} (f: A -> B) `{Equiv B} `{BA: Bottom A} `{BB: Bottom B}: Prop :=
+  f ⊥ = ⊥.
+
+Definition PreserveSup {A B: Type} (f: A -> B) `{Equiv B} `{SA: Sup A} `{SB: Sup B}: Prop :=
+  PreserveSgSetOp f SA SB.
+
+Definition PreserveInf {A B: Type} (f: A -> B) `{Equiv B} `{IA: Inf A} `{IB: Inf B}: Prop :=
+  PreserveSgSetOp f IA IB.
 
 (* TODO: Compatibility lemma, spec, etc... *)
 

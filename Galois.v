@@ -6,7 +6,7 @@ From VSA Require Import Functions.
 
 Import SetNotations.
 
-Class Abstr A C := alpha : C -> A.
+Class Abstr C A := alpha : C -> A.
 Class Concr C A := gamma : A -> C.
 
 #[export]
@@ -17,25 +17,25 @@ Notation "'(α)'" := alpha (only parsing) : vsa.
 Notation "'γ' c" := (gamma c) (at level 20) : vsa.
 Notation "'(γ)'" := gamma (only parsing) : vsa.
 
-Class GaloisConnection (A C: Type) `{PA: Poset A} `{PC: Poset C} (Ab: Abstr A C) (Co: Concr C A): Prop := {
+Class GaloisConnection (C A: Type) `{PC: Poset C} `{PA: Poset A} (Ab: Abstr C A) (Co: Concr C A): Prop := {
   gc_poset_concr :> Poset C;
   gc_poset_abstr :> Poset A;
   gc_spec: forall (P: C) (Q: A), α P ⊑ Q <-> P ⊑ γ Q
 }.
 
-Class GaloisRetraction (A C: Type) `{PA: Poset A} `{PC: Poset C} (Ab: Abstr A C) (Co: Concr C A): Prop := {
-  gr_gc :> GaloisConnection A C Ab Co;
+Class GaloisRetraction (C A: Type) `{PA: Poset A} `{PC: Poset C} (Ab: Abstr C A) (Co: Concr C A): Prop := {
+  gr_gc :> GaloisConnection C A Ab Co;
   gr_abstr_surjective :> Surjective Ab
 }.
 
-Class GaloisIsomorphism (A C: Type) `{PA: Poset A} `{PC: Poset C} (Ab: Abstr A C) (Co: Concr C A): Prop := {
-  gi_gc :> GaloisConnection A C Ab Co;
+Class GaloisIsomorphism (C A: Type) `{PA: Poset A} `{PC: Poset C} (Ab: Abstr C A) (Co: Concr C A): Prop := {
+  gi_gc :> GaloisConnection C A Ab Co;
   gi_abstr_bijective :> Bijective Ab
 }.
 
 Section Properties.
 
-  Context {A C: Type} {Ab: Abstr A C} {Co: Concr C A} `{Poset A} `{Poset C} {GC: GaloisConnection A C Ab Co}.
+  Context {C A: Type} {Ab: Abstr C A} {Co: Concr C A} `{Poset C} `{Poset A} {GC: GaloisConnection C A Ab Co}.
 
   Lemma alpha_increasing:
     Increasing (α).
