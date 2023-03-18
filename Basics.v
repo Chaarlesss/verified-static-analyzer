@@ -1,4 +1,4 @@
-From Coq Require Import Program.Basics.
+From Coq Require Import Program.Program.
 From Coq Require Import Relations.Relations.
 From Coq Require Import Setoids.Setoid.
 From Coq Require Import Classes.Morphisms.
@@ -27,6 +27,31 @@ Infix "≡" := eq (at level 70, no associativity) : vsa.
 Notation "(≡)" := eq (only parsing) : vsa.
 Notation "( x ≡)" := (eq x) (only parsing) : vsa.
 Notation "(≡ x )" := (fun y => eq y x) (only parsing) : vsa.
+
+
+Notation "x ↾ p" := (exist _ x p) (at level 20) : vsa.
+
+Definition sig_ord {A: Type} `{Ord A} (P: A -> Prop) : Ord (sig P) := fun x y => `x ⊑ `y.
+Ltac simpl_sig_ord :=
+  match goal with
+  | |- (@ord _ (@sig_ord _ ?e _) (?x↾_) (?y↾_)) => change (@ord _ e x y)
+  end.
+#[global]
+Hint Extern 10 (Ord (sig _)) => apply @sig_ord: typeclass_instances.
+#[global]
+Hint Extern 4 (@ord _ (sig_ord _ _ _) (_↾_) (_↾_)) => simpl_sig_ord: core.
+
+Definition sig_equiv {A: Type} `{Equiv A} (P: A -> Prop) : Equiv (sig P) := fun x y => `x = `y.
+Ltac simpl_sig_equiv :=
+  match goal with
+  | |- (@equiv _ (@sig_equiv _ ?e _) (?x↾_) (?y↾_)) => change (@equiv _ e x y)
+  end.
+#[global]
+Hint Extern 10 (Equiv (sig _)) => apply @sig_equiv: typeclass_instances.
+#[global]
+Hint Extern 4 (@equiv _ (sig_equiv _ _ _) (_↾_) (_↾_)) => simpl_sig_equiv: core.
+
+
 
 Module SetNotations.
 

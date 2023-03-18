@@ -1,4 +1,4 @@
-From Coq Require Import Program.Basics.
+From Coq Require Import Program.Program.
 From Coq Require Import Relations.Relations.
 From Coq Require Import Setoids.Setoid.
 From Coq Require Import Classes.Morphisms.
@@ -252,3 +252,15 @@ Section Powerset.
   Solve All Obligations with firstorder.
 
 End Powerset.
+
+Section PreserveSup.
+
+  Context (P Q: Type) `{CompleteLattice P} `{CompleteLattice Q}.
+  Let FT : (P -> Q) -> Prop := fun f => PreserveSup f.
+
+  
+  (*#[program, export]
+  Instance PreserveSupPoset : Poset (sig FT). *)
+
+
+End PreserveSup.
