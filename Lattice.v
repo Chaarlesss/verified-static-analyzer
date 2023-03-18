@@ -15,7 +15,7 @@ Class Sup A := sup: ℘ A -> A.
 Class Top A := top: A.
 Class Bottom A := bottom: A.
 
-#[export]
+#[global]
 Typeclasses Transparent Meet Inf Join Sup Top Bottom.
 
 Notation "⊤" := top : vsa.
@@ -62,17 +62,35 @@ Definition PreserveJoin {A B: Type} (f: A -> B) `{Equiv B} `{JA: Join A} `{JB: J
 Definition PreserveMeet {A B: Type} (f: A -> B) `{Equiv B} `{MA: Meet A} `{MB: Meet B}: Prop :=
   PreserveSgOp f MA MB.
 
+Definition PreserveSup {A B: Type} (f: A -> B) `{Equiv B} `{SA: Sup A} `{SB: Sup B}: Prop :=
+  PreserveSgSetOp f SA SB.
+
+Definition PreserveInf {A B: Type} (f: A -> B) `{Equiv B} `{IA: Inf A} `{IB: Inf B}: Prop :=
+  PreserveSgSetOp f IA IB.
+
 Definition PreserveTop {A B: Type} (f: A -> B) `{Equiv B} `{TA: Top A} `{TB: Top B}: Prop :=
   f ⊤ = ⊤.
 
 Definition PreserveBottom {A B: Type} (f: A -> B) `{Equiv B} `{BA: Bottom A} `{BB: Bottom B}: Prop :=
   f ⊥ = ⊥.
 
-Definition PreserveSup {A B: Type} (f: A -> B) `{Equiv B} `{SA: Sup A} `{SB: Sup B}: Prop :=
-  PreserveSgSetOp f SA SB.
+Definition StableJoin {A: Type} (P: A -> Prop) `{J: Join A}: Prop :=
+  StableSgOp P J.
 
-Definition PreserveInf {A B: Type} (f: A -> B) `{Equiv B} `{IA: Inf A} `{IB: Inf B}: Prop :=
-  PreserveSgSetOp f IA IB.
+Definition StableMeet {A: Type} (P: A -> Prop) `{M: Meet A}: Prop :=
+  StableSgOp P M.
+
+Definition StableSup {A: Type} (P: A -> Prop) `{S: Sup A}: Prop :=
+  StableSgSetOp P S.
+
+Definition StableInf {A: Type} (P: A -> Prop) `{I: Inf A}: Prop :=
+  StableSgSetOp P I.
+
+Definition StableTop {A: Type} (P: A -> Prop) `{T: Top A}: Prop :=
+  P ⊤.
+
+Definition StableBottom {A: Type} (P: A -> Prop) `{B: Bottom A}: Prop :=
+  P ⊥.
 
 (* TODO: Compatibility lemma, spec, etc... *)
 

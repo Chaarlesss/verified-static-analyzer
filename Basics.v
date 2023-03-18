@@ -30,28 +30,6 @@ Notation "(≡ x )" := (fun y => eq y x) (only parsing) : vsa.
 
 Notation "x ↾ p" := (exist _ x p) (at level 20) : vsa.
 
-Definition sig_equiv {A: Type} `{Equiv A} (P: A -> Prop) : Equiv (sig P) := fun x y => `x = `y.
-Ltac simpl_sig_equiv :=
-  match goal with
-  | |- (@equiv _ (@sig_equiv _ ?e _) (?x↾_) (?y↾_)) => change (@equiv _ e x y)
-  end.
-
-#[global]
-Hint Extern 10 (Equiv (sig _)) => apply @sig_equiv: typeclass_instances.
-#[global]
-Hint Extern 4 (@equiv _ (sig_equiv _ _ _) (_↾_) (_↾_)) => simpl_sig_equiv: core.
-
-Definition sig_ord {A: Type} `{Ord A} (P: A -> Prop) : Ord (sig P) := fun x y => `x ⊑ `y.
-Ltac simpl_sig_ord :=
-  match goal with
-  | |- (@ord _ (@sig_ord _ ?e _) (?x↾_) (?y↾_)) => change (@ord _ e x y)
-  end.
-
-#[global]
-Hint Extern 10 (Ord (sig _)) => apply @sig_ord: typeclass_instances.
-#[global]
-Hint Extern 4 (@ord _ (sig_ord _ _ _) (_↾_) (_↾_)) => simpl_sig_ord: core.
-
 Module SetNotations.
 
   Notation "'℘' A" := (A -> Prop) (at level 0).
@@ -83,7 +61,7 @@ Notation "(& x )" := (fun y => y & x) (only parsing) : vsa.
 Class Setoid (A: Type) `{E: Equiv A}: Prop :=
   setoid_equiv :> Equivalence (=).
 
-Class Poset (A: Type) `{E: Equiv A} {O: Ord A}: Prop := {
+Class Poset (A: Type) `{E: Equiv A} `{O: Ord A}: Prop := {
   poset_setoid :> Setoid A;
   poset_refl :> Reflexive (⊑);
   poset_antisym :> Antisymmetric A (=) (⊑);
@@ -232,7 +210,7 @@ Section Projection.
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y): Poset A.
   Proof.
-    apply Build_Poset with (projected_setoid f eq_correct);
+    constructor 1 with (projected_setoid f eq_correct);
       repeat intro.
     - apply ord_correct. reflexivity.
     - apply eq_correct. apply antisymmetry; now apply ord_correct.
@@ -243,6 +221,23 @@ Section Projection.
   Qed.
 
 End Projection.
+
+Definition SigEquiv {A: Type} `{Equiv A} (P: A -> Prop) : Equiv (sig P) := fun x y => `x = `y.
+Definition SigOrd {A: Type} `{Ord A} (P: A -> Prop) : Ord (sig P) := fun x y => `x ⊑ `y.
+Ltac simpl_sig_setoid :=
+  match goal with
+  | |- (@equiv _ (@SigEquiv _ ?e _) (?x↾_) (?y↾_)) => change (@equiv _ e x y)
+  | |- (@ord _ (@SigOrd _ ?e _) (?x↾_) (?y↾_)) => change (@ord _ e x y)
+  end.
+
+#[global]
+Hint Extern 10 (Equiv (sig _)) => apply @SigEquiv: typeclass_instances.
+#[global]
+Hint Extern 10 (Ord (sig _)) => apply @SigOrd: typeclass_instances.
+#[global]
+Hint Extern 4 (@equiv _ (SigEquiv _ _ _) (_↾_) (_↾_)) => simpl_sig_setoid: core.
+#[global]
+Hint Extern 4 (@ord _ (SigOrd _ _ _) (_↾_) (_↾_)) => simpl_sig_setoid: core.
 
 #[global]
 Instance SigSetoid {A: Type} `{Setoid A} (P : A -> Prop) : Setoid (sig P).

@@ -4,8 +4,12 @@ From VSA Require Import Basics.
 
 Import SetNotations.
 
-Definition image {X A: Type} (f : X -> A) `{Equiv A} (S : ℘ X) : ℘ A :=
-   fun y => exists x, x ∈ S /\ y = f x.
+(* The definition of image here is maybe to coarse *)
+(* but we don't have the choice (for now) to use this *)
+(* a proper solution would include a rewrite of the set "library" *)
+(* to define the classical operations over sets as morphism *)
+Definition image {X A: Type} (f : X -> A) (S : ℘ X) : ℘ A :=
+   fun y => exists x, x ∈ S /\ y ≡ f x.
 
 Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B}: Prop :=
   increasing : forall x y, x ⊑ y -> f x ⊑ f y.
@@ -28,5 +32,11 @@ Class PreserveSgOp {A B: Type} (f: A -> B) `{Equiv B} `(SgOp A) `(SgOp B): Prop 
 Class PreserveSgSetOp {A B: Type} (f: A -> B) `{Equiv B} `(SgSetOp A) `(SgSetOp B): Prop :=
   preserve_sg_set_op : forall (S: ℘ A), f (sg_set_op S) = sg_set_op (image f S).
 
+Class StableSgOp {A : Type} (P: A -> Prop) `(SgOp A): Prop :=
+  stable_sg_op : forall x y, P x -> P y -> P (x & y).
+
+Class StableSgSetOp {A: Type} (P: A -> Prop) `(SgSetOp A): Prop :=
+  stable_sg_set_op : forall (S: ℘ A), (forall x, x ∈ S -> P x) -> P (sg_set_op S).
+
 #[export]
-Typeclasses Transparent PreserveSgOp PreserveSgSetOp.
+Typeclasses Transparent PreserveSgOp PreserveSgSetOp StableSgOp StableSgSetOp.

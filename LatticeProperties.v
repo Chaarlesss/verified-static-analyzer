@@ -256,9 +256,9 @@ End Powerset.
 
 Section Projection.
 
-  Context {A B: Type} `{CompleteLattice B} `{Equiv A} `{Ord A} `{Join A} `{Meet A} `{Sup A} `{Inf A} `{Top A} `{Bottom A}.
+  Context {A B: Type} `{Equiv A} `{Ord A} `{Join A} `{Meet A} `{Sup A} `{Inf A} `{Top A} `{Bottom A}.
 
-  Lemma projected_join_semi_lattice (f: A -> B)
+  Lemma projected_join_semi_lattice `{JoinSemiLattice B} (f: A -> B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f): JoinSemiLattice A.
@@ -274,13 +274,23 @@ Section Projection.
       destruct (H__fu H__u). split; now apply ord_correct.
     Qed.
 
-  Lemma projected_meet_semi_lattice (f: A -> B)
+  Lemma projected_meet_semi_lattice `{MeetSemiLattice B} (f: A -> B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (meet_correct : PreserveMeet f): MeetSemiLattice A.
-  Admitted.
+  Proof.
+    constructor.
+     now apply (projected_poset f).
+    intros x y u. split.
+    - intros [H__x%ord_correct H__y%ord_correct]. apply ord_correct.
+      rewrite meet_correct. now apply meet_glb.
+    - intros H__u%ord_correct. rewrite meet_correct in H__u.
+      (* Using the right lemmas, can be shortened *)
+      destruct (meet_glb (f x) (f y) (f u)) as [_ H__fu].
+      destruct (H__fu H__u). split; now apply ord_correct.
+    Qed.
 
-  Lemma projected_lattice (f: A -> B)
+  Lemma projected_lattice `{Lattice B} (f: A -> B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f)
@@ -291,7 +301,7 @@ Section Projection.
     now apply (projected_meet_semi_lattice f).
   Qed.
 
-  Lemma projected_complete_lattice (f: A -> B)
+  Lemma projected_complete_lattice `{CompleteLattice B} (f: A -> B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f)
@@ -322,3 +332,57 @@ Section Projection.
   Qed.
 
 End Projection.
+
+Definition SigJoin {A: Type} `{Join A} (P: A -> Prop) (join_correct: StableJoin P): Join (sig P) :=
+  fun x y => (`x ⊔ `y) ↾ (join_correct _ _ (proj2_sig x) (proj2_sig y)).
+
+Definition SigMeet {A: Type} `{Meet A} (P: A -> Prop) (meet_correct: StableMeet P): Meet (sig P) :=
+  fun x y => (`x ⊓ `y) ↾ (meet_correct _ _ (proj2_sig x) (proj2_sig y)).
+
+#[program]
+Definition SigSup {A: Type} `{Sup A} (P: A -> Prop) (sup_correct: StableSup P): Sup (sig P) :=
+  fun (S: ℘ ({ x: A | P x })) => (sup (image (@proj1_sig _ P) S)) ↾ _.
+Next Obligation.
+  apply sup_correct. intros x [[x' H__x'] [_ H__x]]. subst. now apply H__x'.
+Defined.
+
+#[program]
+Definition SigInf {A: Type} `{Inf A} (P: A -> Prop) (inf_correct: StableInf P): Inf (sig P) :=
+  fun (S: ℘ ({ x: A | P x })) => (inf (image (@proj1_sig _ P) S)) ↾ _.
+Next Obligation.
+  apply inf_correct. intros x [[x' H__x'] [_ H__x]]. subst. now apply H__x'.
+Defined.
+Definition SigTop {A: Type} `{Top A} (P: A -> Prop) (top_correct: StableTop P): Top (sig P) :=
+  ⊤ ↾ top_correct.
+
+Definition SigBottom {A: Type} `{Bottom A} (P: A -> Prop) (bottom_correct: StableBottom P): Bottom (sig P) :=
+  ⊤ ↾ bottom_correct.
+
+#[global]
+Instance SigJoinSemiLattice {A: Type} `{JoinSemiLattice A} (P: A -> Prop)
+    (join_correct : StableJoin P): @JoinSemiLattice (sig P) _ _ (SigJoin P join_correct).
+Proof. now apply (projected_join_semi_lattice (@proj1_sig _ P)). Qed.
+
+#[global]
+Instance SigMeetSemiLattice {A: Type} `{MeetSemiLattice A} (P: A -> Prop)
+    (meet_correct : StableMeet P): @MeetSemiLattice (sig P) _ _ (SigMeet P meet_correct).
+Proof. now apply (projected_meet_semi_lattice (@proj1_sig _ P)). Qed.
+
+#[global]
+Instance SigLattice {A: Type} `{Lattice A} (P: A -> Prop)
+    (join_correct : StableJoin P)
+    (meet_correct : StableMeet P): @Lattice (sig P) _ _ (SigJoin P join_correct) (SigMeet P meet_correct) := {}.
+
+#[global]
+Instance SigCompleteLattice {A: Type} `{CompleteLattice A} (P: A -> Prop)
+  (join_correct : StableJoin P) (meet_correct : StableMeet P)
+  (sup_correct : StableSup P) (inf_correct : StableInf P)
+  (top_correct: StableTop P) (bottom_correct: StableBottom P):
+  @CompleteLattice (sig P) _ _ (SigJoin P join_correct) (SigMeet P meet_correct) (SigSup P sup_correct) (SigInf P inf_correct) (SigTop P top_correct) (SigBottom P bottom_correct).
+Proof.
+  apply (projected_complete_lattice (@proj1_sig _ P)); try now auto.
+  - cbv. reflexivity.
+  - cbv. reflexivity.
+Qed.
+
+Instance PreserveSupCompleteLattice {P Q: Type}: CompleteLattice ({ f : (℘ P -> ℘ Q) | PreserveSup f }).
