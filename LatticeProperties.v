@@ -5,6 +5,7 @@ From Coq Require Import Classes.Morphisms.
 From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Basics.
 From VSA Require Import Lattice.
+From VSA Require Import Functions.
 
 Import SetNotations.
 
@@ -253,14 +254,71 @@ Section Powerset.
 
 End Powerset.
 
-Section PreserveSup.
+Section Projection.
 
-  Context (P Q: Type) `{CompleteLattice P} `{CompleteLattice Q}.
-  Let FT : (P -> Q) -> Prop := fun f => PreserveSup f.
+  Context {A B: Type} `{CompleteLattice B} `{Equiv A} `{Ord A} `{Join A} `{Meet A} `{Sup A} `{Inf A} `{Top A} `{Bottom A}.
 
-  
-  (*#[program, export]
-  Instance PreserveSupPoset : Poset (sig FT). *)
+  Lemma projected_join_semi_lattice (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y)
+    (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
+    (join_correct : PreserveJoin f): JoinSemiLattice A.
+  Proof.
+    constructor.
+     now apply (projected_poset f).
+    intros x y u. split.
+    - intros [H__x%ord_correct H__y%ord_correct]. apply ord_correct.
+      rewrite join_correct. now apply join_lub.
+    - intros H__u%ord_correct. rewrite join_correct in H__u.
+      (* Using the right lemmas, can be shortened *)
+      destruct (join_lub (f x) (f y) (f u)) as [_ H__fu].
+      destruct (H__fu H__u). split; now apply ord_correct.
+    Qed.
 
+  Lemma projected_meet_semi_lattice (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y)
+    (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
+    (meet_correct : PreserveMeet f): MeetSemiLattice A.
+  Admitted.
 
-End PreserveSup.
+  Lemma projected_lattice (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y)
+    (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
+    (join_correct : PreserveJoin f)
+    (meet_correct : PreserveMeet f): Lattice A.
+  Proof.
+    constructor.
+    now apply (projected_join_semi_lattice f).
+    now apply (projected_meet_semi_lattice f).
+  Qed.
+
+  Lemma projected_complete_lattice (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y)
+    (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
+    (join_correct : PreserveJoin f)
+    (meet_correct : PreserveMeet f)
+    (sup_correct : PreserveSup f)
+    (inf_correct : PreserveInf f)
+    (top_correct : PreserveTop f)
+    (bottom_correct : PreserveBottom f): CompleteLattice A.
+  Proof.
+    constructor.
+    - now apply (projected_lattice f).
+    - split; intros; apply ord_correct.
+      * transitivity (f (sup S)).
+        (* TODO: lemma/tactic for this kind of trivial goal *)
+         rewrite sup_correct. apply sup_ub. exists x. now split.
+        now apply ord_correct.
+      * rewrite sup_correct. apply sup_lub. intros y [x [H__x H__fx]]. rewrite H__fx.
+        apply ord_correct. now apply H8.
+    - split; intros; apply ord_correct.
+      * transitivity (f (inf S)).
+         now apply ord_correct.
+        (* TODO: idem *)
+        rewrite inf_correct. apply inf_lb. exists x. now split.
+      * rewrite inf_correct. apply inf_glb. intros y [x [H__x H__fx]]. rewrite H__fx.
+        apply ord_correct. now apply H8.
+    - intros x. apply ord_correct. rewrite top_correct. apply top_supremum.
+    - intros x. apply ord_correct. rewrite bottom_correct. apply bottom_infimum.
+  Qed.
+
+End Projection.

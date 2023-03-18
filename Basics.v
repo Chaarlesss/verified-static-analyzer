@@ -28,30 +28,29 @@ Notation "(≡)" := eq (only parsing) : vsa.
 Notation "( x ≡)" := (eq x) (only parsing) : vsa.
 Notation "(≡ x )" := (fun y => eq y x) (only parsing) : vsa.
 
-
 Notation "x ↾ p" := (exist _ x p) (at level 20) : vsa.
-
-Definition sig_ord {A: Type} `{Ord A} (P: A -> Prop) : Ord (sig P) := fun x y => `x ⊑ `y.
-Ltac simpl_sig_ord :=
-  match goal with
-  | |- (@ord _ (@sig_ord _ ?e _) (?x↾_) (?y↾_)) => change (@ord _ e x y)
-  end.
-#[global]
-Hint Extern 10 (Ord (sig _)) => apply @sig_ord: typeclass_instances.
-#[global]
-Hint Extern 4 (@ord _ (sig_ord _ _ _) (_↾_) (_↾_)) => simpl_sig_ord: core.
 
 Definition sig_equiv {A: Type} `{Equiv A} (P: A -> Prop) : Equiv (sig P) := fun x y => `x = `y.
 Ltac simpl_sig_equiv :=
   match goal with
   | |- (@equiv _ (@sig_equiv _ ?e _) (?x↾_) (?y↾_)) => change (@equiv _ e x y)
   end.
+
 #[global]
 Hint Extern 10 (Equiv (sig _)) => apply @sig_equiv: typeclass_instances.
 #[global]
 Hint Extern 4 (@equiv _ (sig_equiv _ _ _) (_↾_) (_↾_)) => simpl_sig_equiv: core.
 
+Definition sig_ord {A: Type} `{Ord A} (P: A -> Prop) : Ord (sig P) := fun x y => `x ⊑ `y.
+Ltac simpl_sig_ord :=
+  match goal with
+  | |- (@ord _ (@sig_ord _ ?e _) (?x↾_) (?y↾_)) => change (@ord _ e x y)
+  end.
 
+#[global]
+Hint Extern 10 (Ord (sig _)) => apply @sig_ord: typeclass_instances.
+#[global]
+Hint Extern 4 (@ord _ (sig_ord _ _ _) (_↾_) (_↾_)) => simpl_sig_ord: core.
 
 Module SetNotations.
 
@@ -95,7 +94,7 @@ Class Poset (A: Type) `{E: Equiv A} {O: Ord A}: Prop := {
 Definition UpperBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
 Definition LowerBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
 
-Section DualSetoid.
+Section Dual.
 
   #[local]
   Set Printing Implicit.
@@ -121,7 +120,7 @@ Section DualSetoid.
 
   Lemma DualPoset {P: Poset A}: @Poset A E DualOrd.
   Proof.
-    assert (@Setoid A E) as S. { apply poset_setoid. }
+    pose proof (poset_setoid) as S.
     apply Build_Poset with S.
     - exact DualOrd_Reflexive.
     - exact DualOrd_Antisymmetric.
@@ -131,7 +130,7 @@ Section DualSetoid.
         rewrite H0. rewrite H. assumption.
   Defined.
 
-End DualSetoid.
+End Dual.
 
 Section PropSetoid.
 
@@ -149,7 +148,7 @@ Section PropSetoid.
 
 End PropSetoid.
 
-Section PointwiseSetoid.
+Section Pointwise.
 
   Context (X A: Type) {E: Equiv A} {O: Ord A}.
 
@@ -164,7 +163,7 @@ Section PointwiseSetoid.
   #[export]
   Instance PointwiseEquiv_Equivalence {St: Setoid A}: Equivalence PointwiseEquiv.
   Proof.
-    apply Build_Equivalence; reduce.
+    constructor; repeat intro.
     - reflexivity.
     - symmetry. apply H.
     - transitivity (y x0). apply H. apply H0.
@@ -179,26 +178,26 @@ Section PointwiseSetoid.
   #[export]
   Instance PointwiseOrd_Antisymmetric {P: Poset A}: Antisymmetric (X -> A) PointwiseEquiv PointwiseOrd.
   Proof.
-    intros f g H1 H2 x. apply antisymmetry; auto.
+    intros f g H1 H2 x. now apply antisymmetry.
   Qed.
 
   #[export]
   Instance PointwiseOrd_Transitive {P: Poset A}: Transitive PointwiseOrd.
   Proof.
-    intros f g h H1 H2 x. transitivity (g x). apply H1. apply H2.
+    intros f g h H1 H2 x. now transitivity (g x).
   Qed.
 
   #[program, export]
   Instance PointwisePoset {P: Poset A}: Poset (X -> A).
   Next Obligation.
-    intros f f' H__f g g' H__g. split; intros H.
-    - intros x. cbv in H__f, H__g. rewrite <- H__f. rewrite <- H__g. apply H.
-    - intros x. cbv in H__f, H__g. rewrite H__f. rewrite H__g. apply H.
+    intros f f' H__f g g' H__g. split; intros H x; cbv in H__f, H__g.
+    - rewrite <- H__f. rewrite <- H__g. apply H.
+    - rewrite H__f. rewrite H__g. apply H.
   Qed.
 
-End PointwiseSetoid.
+End Pointwise.
 
-Section PowersetSetoid.
+Section Powerset.
 
   Context (X: Type).
 
@@ -214,4 +213,41 @@ Section PowersetSetoid.
   Instance PowersetPoset: Poset (℘ X).
   Solve All Obligations with firstorder.
 
-End PowersetSetoid.
+End Powerset.
+
+Section Projection.
+
+  Context {A B: Type}.
+
+  Lemma projected_setoid `{Setoid B} `{Equiv A} (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y) : Setoid A.
+  Proof.
+    constructor; repeat intro; apply eq_correct.
+      reflexivity.
+     symmetry. now apply eq_correct.
+    transitivity (f y); now apply eq_correct.
+  Qed.
+
+  Lemma projected_poset `{Poset B} `{Equiv A} `{Ord A} (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y)
+    (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y): Poset A.
+  Proof.
+    apply Build_Poset with (projected_setoid f eq_correct);
+      repeat intro.
+    - apply ord_correct. reflexivity.
+    - apply eq_correct. apply antisymmetry; now apply ord_correct.
+    - apply ord_correct. transitivity (f y); now apply ord_correct.
+    - split; intro; apply ord_correct.
+       rewrite eq_correct in H2, H3. rewrite <- H2. rewrite <- H3. now apply ord_correct.
+      rewrite eq_correct in H2, H3. rewrite H2. rewrite H3. now apply ord_correct.
+  Qed.
+
+End Projection.
+
+#[global]
+Instance SigSetoid {A: Type} `{Setoid A} (P : A -> Prop) : Setoid (sig P).
+Proof. now apply (projected_setoid (@proj1_sig _ P)). Qed.
+
+#[global]
+Instance SigPoset {A: Type} `{Poset A} (P : A -> Prop) : Poset (sig P).
+Proof. now apply (projected_poset (@proj1_sig _ P)). Qed.
