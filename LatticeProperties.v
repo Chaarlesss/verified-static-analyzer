@@ -477,6 +477,18 @@ Proof.
     now left. now right.
 Qed.
 
+Lemma meet_sup_comm {A: Type} `{CompleteLattice A}:
+  forall (P Q: ℘ A), sup (P ⊓ Q) = (sup P) ⊓ (sup Q).
+Proof.
+  intros P Q. apply antisymmetry.
+  - apply sup_lub. intros x [H__P H__Q]. apply meet_glb. split; now apply sup_ub.
+  -
+    transitivity (sup P).
+     now apply meet_lb.
+    apply sup_increasing.
+    intros x H__P. unfold meet. unfold PowersetMeet.
+    Admitted.
+
 #[program]
 Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} :=
   SigCompleteLattice (fun f : P -> Q => PreserveSup f) _ _ _ _ _ _.
@@ -495,13 +507,13 @@ Next Obligation.
     rewrite join_sup_comm. apply join_increasing; apply sup_ub; now exists x.
 Qed.
 Next Obligation.
-  (* Make this proof disapear *)
   intros f g H__f H__g S.
   unfold sg_set_op. fold sup. unfold sg_op. unfold meet. unfold PointwiseMeet.
   unfold PreserveSup in *. unfold PreserveSgSetOp in *.
   rewrite H__f. rewrite H__g.
   apply antisymmetry.
-  - admit.
+  - rewrite <- H__f. rewrite <- H__g.
+    apply sup_ub. unfold image.
   - apply meet_glb. split; apply sup_lub; intros y [x [H__x H__eq]]; subst.
      transitivity (f x). now apply meet_lb. apply sup_ub. now exists x.
     transitivity (g x). now apply meet_lb. apply sup_ub. now exists x.
