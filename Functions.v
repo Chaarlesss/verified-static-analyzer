@@ -8,6 +8,8 @@ Import SetNotations.
 (* but we don't have the choice (for now) to use this *)
 (* a proper solution would include a rewrite of the set "library" *)
 (* to define the classical operations over sets as morphism *)
+(* For instance, we are not able to prove that if two elements are equivalents *)
+(* and one of them is in a set, then the other is also in the set (because it is the same element) *)
 Definition image {X A: Type} (f : X -> A) (S : ℘ X) : ℘ A :=
    fun y => exists x, x ∈ S /\ y ≡ f x.
 

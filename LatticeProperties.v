@@ -101,6 +101,12 @@ Section Sup.
     intros S x H__x. destruct (sup_lub S (sup S)). firstorder.
   Qed.
 
+  Lemma sup_increasing:
+    Increasing (sup).
+  Proof.
+    intros P Q H__S. apply sup_lub. intros x H__x%H__S. now apply sup_ub.
+  Qed.
+
 End Sup.
 
 Section Inf.
@@ -110,6 +116,8 @@ Section Inf.
   Lemma inf_lb:
     forall (S: ℘ A) x, x ∈ S -> inf S ⊑ x.
   Admitted.
+
+  (* Lemma inf_decreasing *)
 
 End Inf.
 
@@ -248,7 +256,7 @@ Section Powerset.
   #[program, export]
   Instance PowersetLattice: Lattice (℘ X).
 
-  #[program, export]
+  #[program, global]
   Instance PowersetCompleteLattice: CompleteLattice (℘ X).
   Solve All Obligations with firstorder.
 
@@ -352,6 +360,7 @@ Definition SigInf {A: Type} `{Inf A} (P: A -> Prop) (inf_correct: StableInf P): 
 Next Obligation.
   apply inf_correct. intros x [[x' H__x'] [_ H__x]]. subst. now apply H__x'.
 Defined.
+
 Definition SigTop {A: Type} `{Top A} (P: A -> Prop) (top_correct: StableTop P): Top (sig P) :=
   ⊤ ↾ top_correct.
 
@@ -359,30 +368,55 @@ Definition SigBottom {A: Type} `{Bottom A} (P: A -> Prop) (bottom_correct: Stabl
   ⊤ ↾ bottom_correct.
 
 #[global]
-Instance SigJoinSemiLattice {A: Type} `{JoinSemiLattice A} (P: A -> Prop)
-    (join_correct : StableJoin P): @JoinSemiLattice (sig P) _ _ (SigJoin P join_correct).
+Hint Extern 10 (Join (sig _)) => now apply SigJoin: typeclass_instances.
+#[global]
+Hint Extern 10 (Meet (sig _)) => now apply SigMeet: typeclass_instances.
+#[global]
+Hint Extern 10 (Sup (sig _)) => now apply SigSup: typeclass_instances.
+#[global]
+Hint Extern 10 (Inf (sig _)) => now apply SigInf: typeclass_instances.
+#[global]
+Hint Extern 10 (Top (sig _)) => now apply SigTop: typeclass_instances.
+#[global]
+Hint Extern 10 (Bottom (sig _)) => now apply SigBottom: typeclass_instances.
+
+#[global]
+Instance SigJoinSemiLattice {A: Type} `{JoinSemiLattice A} (P: A -> Prop) (join_correct : StableJoin P):
+  JoinSemiLattice (sig P).
 Proof. now apply (projected_join_semi_lattice (@proj1_sig _ P)). Qed.
 
 #[global]
-Instance SigMeetSemiLattice {A: Type} `{MeetSemiLattice A} (P: A -> Prop)
-    (meet_correct : StableMeet P): @MeetSemiLattice (sig P) _ _ (SigMeet P meet_correct).
+Instance SigMeetSemiLattice {A: Type} `{MeetSemiLattice A} (P: A -> Prop) (meet_correct : StableMeet P):
+  MeetSemiLattice (sig P).
 Proof. now apply (projected_meet_semi_lattice (@proj1_sig _ P)). Qed.
 
 #[global]
 Instance SigLattice {A: Type} `{Lattice A} (P: A -> Prop)
-    (join_correct : StableJoin P)
-    (meet_correct : StableMeet P): @Lattice (sig P) _ _ (SigJoin P join_correct) (SigMeet P meet_correct) := {}.
+    (join_correct : StableJoin P) (meet_correct : StableMeet P): Lattice (sig P) := {}.
 
 #[global]
 Instance SigCompleteLattice {A: Type} `{CompleteLattice A} (P: A -> Prop)
   (join_correct : StableJoin P) (meet_correct : StableMeet P)
   (sup_correct : StableSup P) (inf_correct : StableInf P)
   (top_correct: StableTop P) (bottom_correct: StableBottom P):
-  @CompleteLattice (sig P) _ _ (SigJoin P join_correct) (SigMeet P meet_correct) (SigSup P sup_correct) (SigInf P inf_correct) (SigTop P top_correct) (SigBottom P bottom_correct).
+  CompleteLattice (sig P).
 Proof.
   apply (projected_complete_lattice (@proj1_sig _ P)); try now auto.
   - cbv. reflexivity.
   - cbv. reflexivity.
 Qed.
 
-Instance PreserveSupCompleteLattice {P Q: Type}: CompleteLattice ({ f : (℘ P -> ℘ Q) | PreserveSup f }).
+#[program]
+Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} :=
+  SigCompleteLattice (fun f : P -> Q => PreserveSup f) _ _ _ _ _ _.
+Next Obligation.
+  intros f g H__f H__g S.
+  unfold sg_set_op. fold sup. unfold sg_op. unfold PointwiseJoin.
+  apply antisymmetry.
+  - apply join_lub. split.
+    rewrite H__f. apply sup_lub. intros x [y [H__y H__eq]]; subst.
+    transitivity ((f ⊔ g) y). apply join_ub. apply sup_ub. now exists y.
+    rewrite H__g. apply sup_lub. intros x [y [H__y H__eq]]; subst.
+    transitivity ((f ⊔ g) y). apply join_ub. apply sup_ub. now exists y.
+  - unfold PreserveSup in *. unfold PreserveSgSetOp in *. unfold join.
+    (* Stuck because Join is not Proper *)

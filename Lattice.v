@@ -75,10 +75,10 @@ Definition PreserveBottom {A B: Type} (f: A -> B) `{Equiv B} `{BA: Bottom A} `{B
   f ⊥ = ⊥.
 
 Definition StableJoin {A: Type} (P: A -> Prop) `{J: Join A}: Prop :=
-  StableSgOp P J.
+  StableSgOp P (⊔).
 
 Definition StableMeet {A: Type} (P: A -> Prop) `{M: Meet A}: Prop :=
-  StableSgOp P M.
+  StableSgOp P (⊓).
 
 Definition StableSup {A: Type} (P: A -> Prop) `{S: Sup A}: Prop :=
   StableSgSetOp P S.

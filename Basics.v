@@ -112,15 +112,15 @@ End Dual.
 
 Section PropSetoid.
 
-  #[export]
+  #[global]
   Instance PropEquiv: Equiv Prop := iff.
-  #[export]
+  #[global]
   Instance PropOrd: Ord Prop := impl.
 
-  #[program, export]
+  #[program, global]
   Instance PropSetoid: Setoid Prop.
 
-  #[program, export]
+  #[program, global]
   Instance PropPoset: Poset Prop.
   Solve All Obligations with firstorder.
 
@@ -130,15 +130,15 @@ Section Pointwise.
 
   Context (X A: Type) {E: Equiv A} {O: Ord A}.
 
-  #[export]
+  #[global]
   Instance PointwiseEquiv: Equiv (X -> A) :=
     fun f g => forall (x: X), f x = g x.
 
-  #[export]
+  #[global]
   Instance PointwiseOrd: Ord (X -> A) :=
     fun f g => forall (x: X), f x ⊑ g x.
 
-  #[export]
+  #[global]
   Instance PointwiseEquiv_Equivalence {St: Setoid A}: Equivalence PointwiseEquiv.
   Proof.
     constructor; repeat intro.
@@ -147,25 +147,25 @@ Section Pointwise.
     - transitivity (y x0). apply H. apply H0.
   Qed.
 
-  #[export]
+  #[global]
   Instance PointwiseOrd_Reflexive {P: Poset A}: Reflexive PointwiseOrd.
   Proof.
     intros f x. reflexivity.
   Qed.
 
-  #[export]
+  #[global]
   Instance PointwiseOrd_Antisymmetric {P: Poset A}: Antisymmetric (X -> A) PointwiseEquiv PointwiseOrd.
   Proof.
     intros f g H1 H2 x. now apply antisymmetry.
   Qed.
 
-  #[export]
+  #[global]
   Instance PointwiseOrd_Transitive {P: Poset A}: Transitive PointwiseOrd.
   Proof.
     intros f g h H1 H2 x. now transitivity (g x).
   Qed.
 
-  #[program, export]
+  #[program, global]
   Instance PointwisePoset {P: Poset A}: Poset (X -> A).
   Next Obligation.
     intros f f' H__f g g' H__g. split; intros H x; cbv in H__f, H__g.
@@ -175,23 +175,23 @@ Section Pointwise.
 
 End Pointwise.
 
-Section Powerset.
+Definition PowersetEquiv {X: Type} : Equiv (℘ X) :=
+  fun P Q => forall f, f ∈ P <-> f ∈ Q.
 
-  Context (X: Type).
+Definition PowersetOrd {X: Type}: Ord (℘ X) :=
+  fun P Q => P ⊆ Q.
 
-  #[export]
-  Instance PowersetEquiv : Equiv (℘ X) :=
-    fun P Q => forall f, f ∈ P <-> f ∈ Q.
+#[global]
+Hint Extern 10 (Equiv (℘ _)) => apply @PowersetEquiv: typeclass_instances.
+#[global]
+Hint Extern 10 (Ord (℘ _)) => apply @PowersetOrd: typeclass_instances.
 
-  #[export]
-  Instance PowersetOrd : Ord (℘ X) :=
-    fun P Q => P ⊆ Q.
+#[program, global]
+Instance PowersetSetoid {X: Type}: Setoid (℘ X).
 
-  #[program, export]
-  Instance PowersetPoset: Poset (℘ X).
-  Solve All Obligations with firstorder.
-
-End Powerset.
+#[program, global]
+Instance PowersetPoset {X: Type}: Poset (℘ X).
+Next Obligation. firstorder. Qed.
 
 Section Projection.
 
