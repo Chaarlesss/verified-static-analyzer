@@ -52,6 +52,36 @@ Section Join.
       * transitivity (y ⊔ z); apply join_ub.
   Qed.
 
+  Lemma join_increasing:
+    forall x y z u, x ⊑ y -> z ⊑ u -> x ⊔ z ⊑ y ⊔ u.
+  Proof.
+    intros x y z u H__ord1 H__ord2. apply join_lub; split.
+     transitivity y. assumption. now apply join_ub.
+    transitivity u. assumption. now apply join_ub.
+  Qed.
+
+   Lemma join_increasing_l:
+    forall x y z, x ⊑ y -> x ⊔ z ⊑ y ⊔ z.
+  Proof.
+    intros x y z H__orq. now apply join_increasing.
+  Qed.
+
+  Lemma join_increasing_r:
+    forall x y z, x ⊑ y -> z ⊔ x ⊑ z ⊔ y.
+  Proof.
+    intros x y z H__orq. now apply join_increasing.
+  Qed.
+
+  #[global]
+  Instance: Proper ((=) ==> (=) ==> (=)) (⊔).
+  Proof.
+    intros x y H1 x' y' H2. apply antisymmetry; apply join_lub; split.
+    - rewrite H1. now apply join_ub.
+    - rewrite H2. now apply join_ub.
+    - rewrite <- H1. now apply join_ub.
+    - rewrite <- H2. now apply join_ub.
+  Qed.
+
 End Join.
 
 Section Meet.
@@ -73,6 +103,36 @@ Section Meet.
   Lemma meet_assoc:
     forall x y z, x ⊓ (y ⊓ z) = (x ⊓ y) ⊓ z.
   Admitted.
+
+  Lemma meet_increasing:
+    forall x y z u, x ⊑ y -> z ⊑ u -> x ⊓ z ⊑ y ⊓ u.
+  Proof.
+    intros x y z u H__ord1 H__ord2. apply meet_glb; split.
+      transitivity x. now apply meet_lb. assumption.
+    transitivity z. now apply meet_lb. assumption.
+  Qed.
+
+  Lemma meet_increasing_l:
+    forall x y z, x ⊑ y -> x ⊓ z ⊑ y ⊓ z.
+  Proof.
+    intros x y z H__orq. now apply meet_increasing.
+  Qed.
+
+  Lemma meet_increasing_r:
+    forall x y z, x ⊑ y -> z ⊓ x ⊑ z ⊓ y.
+  Proof.
+    intros x y z H__orq. now apply meet_increasing.
+  Qed.
+
+  #[global]
+  Instance: Proper ((=) ==> (=) ==> (=)) (⊓).
+  Proof.
+    intros x y H1 x' y' H2. apply antisymmetry; apply meet_glb; split.
+    - rewrite <- H1. now apply meet_lb.
+    - rewrite <- H2. now apply meet_lb.
+    - rewrite H1. now apply meet_lb.
+    - rewrite H2. now apply meet_lb.
+  Qed.
 
 End Meet.
 
@@ -406,17 +466,46 @@ Proof.
   - cbv. reflexivity.
 Qed.
 
+Lemma join_sup_comm {A: Type} `{CompleteLattice A}:
+  forall (P Q: ℘ A), sup (P ⊔ Q) = (sup P) ⊔ (sup Q).
+Proof.
+  intros P Q. apply antisymmetry.
+  - apply sup_lub. intros x [H__x | H__x].
+     transitivity (sup P). now apply sup_ub. now apply join_ub.
+    transitivity (sup Q). now apply sup_ub. now apply join_ub.
+  - apply join_lub. split; apply sup_increasing; intros x H__x.
+    now left. now right.
+Qed.
+
 #[program]
 Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} :=
   SigCompleteLattice (fun f : P -> Q => PreserveSup f) _ _ _ _ _ _.
 Next Obligation.
   intros f g H__f H__g S.
-  unfold sg_set_op. fold sup. unfold sg_op. unfold PointwiseJoin.
+  (* TODO: make the correct type classes/definitions transparent *)
+  unfold sg_set_op. fold sup. unfold sg_op. unfold join. unfold PointwiseJoin.
+  unfold PreserveSup in *. unfold PreserveSgSetOp in *.
+  rewrite H__f. rewrite H__g.
   apply antisymmetry.
-  - apply join_lub. split.
-    rewrite H__f. apply sup_lub. intros x [y [H__y H__eq]]; subst.
-    transitivity ((f ⊔ g) y). apply join_ub. apply sup_ub. now exists y.
-    rewrite H__g. apply sup_lub. intros x [y [H__y H__eq]]; subst.
-    transitivity ((f ⊔ g) y). apply join_ub. apply sup_ub. now exists y.
-  - unfold PreserveSup in *. unfold PreserveSgSetOp in *. unfold join.
-    (* Stuck because Join is not Proper *)
+  - apply join_lub. split;
+      apply sup_lub; intros x [y [H__y H__eq]]; subst;
+      (transitivity ((f ⊔ g) y); [now apply join_ub | apply sup_ub; now exists y]).
+  - rewrite <- join_sup_comm.
+    apply sup_lub. intros y [x [H__x H__eq]]; subst.
+    rewrite join_sup_comm. apply join_increasing; apply sup_ub; now exists x.
+Qed.
+Next Obligation.
+  (* Make this proof disapear *)
+  intros f g H__f H__g S.
+  unfold sg_set_op. fold sup. unfold sg_op. unfold meet. unfold PointwiseMeet.
+  unfold PreserveSup in *. unfold PreserveSgSetOp in *.
+  rewrite H__f. rewrite H__g.
+  apply antisymmetry.
+  - admit.
+  - apply meet_glb. split; apply sup_lub; intros y [x [H__x H__eq]]; subst.
+     transitivity (f x). now apply meet_lb. apply sup_ub. now exists x.
+    transitivity (g x). now apply meet_lb. apply sup_ub. now exists x.
+  - rewrite <- join_sup_comm.
+    apply sup_lub. intros y [x [H__x H__eq]]; subst.
+    rewrite join_sup_comm. apply join_increasing; apply sup_ub; now exists x.
+Qed.
