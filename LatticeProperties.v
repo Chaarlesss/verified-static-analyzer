@@ -19,20 +19,34 @@ Section Join.
     intros. apply join_lub. reflexivity.
   Qed.
 
+  Lemma join_le:
+    forall x y z, x ⊑ y \/ x ⊑ z -> x ⊑ y ⊔ z.
+  Proof.
+    intros x y z [H__x | H__x].
+     transitivity y. assumption. now apply join_ub.
+    transitivity z. assumption. now apply join_ub.
+  Qed.
+
+  Lemma join_le_l:
+    forall x y z, x ⊑ y -> x ⊑ y ⊔ z.
+  Proof. intros. apply join_le. now left. Qed.
+
+  Lemma join_le_r:
+    forall x y z, x ⊑ z -> x ⊑ y ⊔ z.
+  Proof. intros. apply join_le. now right. Qed.
+
   Lemma join_idempotent:
     forall x, x ⊔ x = x.
   Proof.
-    intros x.
-    apply antisymmetry.
-    - apply join_lub. split; reflexivity.
+    intros. apply antisymmetry.
+    - apply join_lub. now split.
     - apply join_ub.
   Qed.
 
   Lemma join_comm:
     forall x y, x ⊔ y = y ⊔ x.
   Proof.
-    intros x y.
-    apply antisymmetry; apply join_lub; split; apply join_ub.
+    intros. apply antisymmetry; apply join_lub; split; apply join_ub.
   Qed.
 
   Lemma join_assoc:
@@ -167,6 +181,14 @@ Section Sup.
     intros P Q H__S. apply sup_lub. intros x H__x%H__S. now apply sup_ub.
   Qed.
 
+  Lemma sup_le:
+    forall (P Q: ℘ A), (forall x, x ∈ P -> (exists x', x' ∈ Q /\ x ⊑ x')) -> sup P ⊑ sup Q.
+  Proof.
+    intros P Q H__elt. apply sup_lub. intros x H__x.
+    destruct (H__elt x H__x) as [x' [H__x' H__ord]].
+    transitivity x'. assumption. now apply sup_ub.
+  Qed.
+
 End Sup.
 
 Section Inf.
@@ -180,6 +202,47 @@ Section Inf.
   (* Lemma inf_decreasing *)
 
 End Inf.
+
+Lemma alt1_Build_CompleteLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{S: Sup A} `{I: Inf A}:
+  Poset A ->
+  (forall (S: ℘ A) u, (sup S) ⊑ u <-> (forall x, x ∈ S -> x ⊑ u)) ->
+  (forall (S: ℘ A) u, u ⊑ (inf S) <-> (forall x, x ∈ S -> u ⊑ x)) ->
+  @CompleteLattice A E O (Join_Sup S) (Meet_Inf I) S I (Top_Sup S) (Bottom_Inf I).
+Proof.
+  intros P sup_lub inf_glb.
+  constructor; auto.
+  - constructor; constructor; auto.
+    + intros x y u. split.
+       intros [H__x H__y]. apply sup_lub. intros z [H__z | H__z]; now rewrite H__z.
+      intros H__u. split; apply sup_lub with {{ x; y }}; auto. now left. now right.
+    + intros x y u. split.
+       intros [H__x H__y]. apply inf_glb. intros z [H__z | H__z]; now rewrite H__z.
+      intros H__u. split; apply inf_glb with {{ x; y }}; auto. now left. now right.
+  - intros x. now apply sup_lub with (fun _ : A => True).
+  - intros x. now apply inf_glb with (fun _ : A => True).
+Qed.
+
+Lemma alt2_Build_CompleteLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{S: Sup A}:
+  Poset A ->
+  (forall (S: ℘ A) u, (sup S) ⊑ u <-> (forall x, x ∈ S -> x ⊑ u)) ->
+  @CompleteLattice A E O (Join_Sup S) (Meet_Sup S) S (Inf_Sup S) (Top_Sup S) (Bottom_Sup S).
+Proof.
+  intros P sup_lub.
+  constructor; auto.
+  - constructor; constructor; auto.
+    + intros x y u. split.
+       intros [H__x H__y]. apply sup_lub. intros z [H__z | H__z]; now rewrite H__z.
+      intros H__u. split; apply sup_lub with {{ x; y }}; auto. now left. now right.
+    + intros x y u. split.
+       intros [H__x H__y]. apply sup_lub with (fun z => z ⊑ x /\ z ⊑ y); auto. reflexivity.
+      intros H__u. split; transitivity (Meet_Sup S x y); auto; apply sup_lub; now intros z [H__x H__y].
+  - intros Q u. unfold inf. unfold Inf_Sup. split.
+     intros H__u x H__x. transitivity (sup (fun x : A => forall t, t ∈ Q -> x ⊑ t)); auto.
+     apply sup_lub. now auto.
+    intros H__u. now apply sup_lub with (fun x : A => forall t, t ∈ Q -> x ⊑ t).
+  - intros x. now apply sup_lub with (fun _ : A => True).
+  - intros x. now apply sup_lub.
+Qed.
 
 Section PropLattice.
 
@@ -207,33 +270,24 @@ Section PropLattice.
 
 End PropLattice.
 
+
+
 Section Pointwise.
 
   Context (X A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
 
   #[export]
-  Instance PointwiseJoin: Join (X -> A) :=
-    fun f g (x: X) => f x ⊔ g x.
-
+  Instance PointwiseJoin: Join (X -> A) := fun f g (x: X) => f x ⊔ g x.
   #[export]
-  Instance PointwiseMeet: Meet (X -> A) :=
-    fun f g (x: X) => f x ⊓ g x.
-
+  Instance PointwiseMeet: Meet (X -> A) := fun f g (x: X) => f x ⊓ g x.
   #[export]
-  Instance PointwiseSup: Sup (X -> A) :=
-    fun (S: ℘ (X -> A)) (x: X) => sup (fun a => exists f, f ∈ S /\ a = f x).
-
+  Instance PointwiseSup: Sup (X -> A) := fun (S: ℘ (X -> A)) (x: X) => sup (fun a => exists f, f ∈ S /\ a = f x).
   #[export]
-  Instance PointwiseInf: Inf (X -> A) :=
-    fun (S: ℘ (X -> A)) (x: X) => inf (fun a => exists f, f ∈ S /\ a = f x).
-
+  Instance PointwiseInf: Inf (X -> A) := fun (S: ℘ (X -> A)) (x: X) => inf (fun a => exists f, f ∈ S /\ a = f x).
   #[export]
-  Instance PointwiseTop: Top (X -> A) :=
-    fun _ => ⊤.
-
+  Instance PointwiseTop: Top (X -> A) := fun _ => ⊤.
   #[export]
-  Instance PointwiseBottom: Bottom (X -> A) :=
-    fun _ => ⊥.
+  Instance PointwiseBottom: Bottom (X -> A) := fun _ => ⊥.
 
   #[program, export]
   Instance PointwiseJoinSemiLattice {JSL: JoinSemiLattice A}: JoinSemiLattice (X -> A).
@@ -282,28 +336,17 @@ Section Powerset.
   Context (X: Type).
 
   #[export]
-  Instance PowersetJoin : Join (℘ X) :=
-    fun P Q => P ∪ Q.
-
+  Instance PowersetJoin : Join (℘ X) := fun P Q => P ∪ Q.
   #[export]
-  Instance PowersetMeet : Meet (℘ X) :=
-    fun P Q => P ∩ Q.
-
+  Instance PowersetMeet : Meet (℘ X) := fun P Q => P ∩ Q.
   #[export]
-  Instance PowersetSup : Sup (℘ X) :=
-    fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
-
+  Instance PowersetSup : Sup (℘ X) := fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
   #[export]
-  Instance PowersetInf : Inf (℘ X) :=
-    fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
-
+  Instance PowersetInf : Inf (℘ X) := fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
   #[export]
-  Instance PowersetTop : Top (℘ X) :=
-    fun _ => True.
-
+  Instance PowersetTop : Top (℘ X) := fun _ => True.
   #[export]
-  Instance PowersetBottom : Bottom (℘ X) :=
-    ∅.
+  Instance PowersetBottom : Bottom (℘ X) := fun _ => False.
 
   #[program, export]
   Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
@@ -369,7 +412,7 @@ Section Projection.
     now apply (projected_meet_semi_lattice f).
   Qed.
 
-  Lemma projected_complete_lattice `{CompleteLattice B} (f: A -> B)
+  Definition Build_ProjectedCompleteLattice `{CompleteLattice B} (f: A -> B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f)
@@ -397,7 +440,22 @@ Section Projection.
         apply ord_correct. now apply H8.
     - intros x. apply ord_correct. rewrite top_correct. apply top_supremum.
     - intros x. apply ord_correct. rewrite bottom_correct. apply bottom_infimum.
-  Qed.
+  Defined.
+
+  #[program]
+  Definition alt2_Build_ProjectedCompleteLattice `{CompleteLattice B} (f: A -> B)
+    (eq_correct : forall x y, x = y <-> f x = f y)
+    (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
+    (sup_correct : PreserveSup f) := alt2_Build_CompleteLattice A (projected_poset f eq_correct ord_correct) _.
+  Next Obligation.
+    split; intros; apply ord_correct.
+    * transitivity (f (sup S)).
+      (* TODO: lemma/tactic for this kind of trivial goal *)
+       rewrite sup_correct. apply sup_ub. exists x. now split.
+      now apply ord_correct.
+    * rewrite sup_correct. apply sup_lub. intros y [x [H__x H__fx]]. rewrite H__fx.
+      apply ord_correct. now apply H8.
+  Defined.
 
 End Projection.
 
@@ -461,9 +519,22 @@ Instance SigCompleteLattice {A: Type} `{CompleteLattice A} (P: A -> Prop)
   (top_correct: StableTop P) (bottom_correct: StableBottom P):
   CompleteLattice (sig P).
 Proof.
-  apply (projected_complete_lattice (@proj1_sig _ P)); try now auto.
+  apply (Build_ProjectedCompleteLattice (@proj1_sig _ P)); try now auto.
   - cbv. reflexivity.
   - cbv. reflexivity.
+Qed.
+
+#[program]
+Definition alt2_Build_SigCompleteLattice {A: Type} `{CompleteLattice A} (P: A -> Prop)
+  (sup_correct : StableSup P) := alt2_Build_ProjectedCompleteLattice (@proj1_sig _ P) _ _ _.
+Next Obligation.
+  now split.
+Qed.
+Next Obligation.
+  now split.
+Qed.
+Next Obligation.
+  repeat intro. reflexivity.
 Qed.
 
 Lemma join_sup_comm {A: Type} `{CompleteLattice A}:
@@ -477,47 +548,24 @@ Proof.
     now left. now right.
 Qed.
 
-Lemma meet_sup_comm {A: Type} `{CompleteLattice A}:
-  forall (P Q: ℘ A), sup (P ⊓ Q) = (sup P) ⊓ (sup Q).
+Lemma meet_sup_semicomm {A: Type} `{CompleteLattice A}:
+  forall (P Q: ℘ A), sup (P ⊓ Q) ⊑ (sup P) ⊓ (sup Q).
 Proof.
-  intros P Q. apply antisymmetry.
-  - apply sup_lub. intros x [H__P H__Q]. apply meet_glb. split; now apply sup_ub.
-  -
-    transitivity (sup P).
-     now apply meet_lb.
-    apply sup_increasing.
-    intros x H__P. unfold meet. unfold PowersetMeet.
-    Admitted.
+  intros P Q. apply sup_lub. intros x [H__P H__Q]. apply meet_glb. split; now apply sup_ub.
+Qed.
 
 #[program]
 Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} :=
-  SigCompleteLattice (fun f : P -> Q => PreserveSup f) _ _ _ _ _ _.
+  alt2_Build_SigCompleteLattice (fun f : P -> Q => PreserveSup f) _.
 Next Obligation.
-  intros f g H__f H__g S.
-  (* TODO: make the correct type classes/definitions transparent *)
-  unfold sg_set_op. fold sup. unfold sg_op. unfold join. unfold PointwiseJoin.
-  unfold PreserveSup in *. unfold PreserveSgSetOp in *.
-  rewrite H__f. rewrite H__g.
-  apply antisymmetry.
-  - apply join_lub. split;
-      apply sup_lub; intros x [y [H__y H__eq]]; subst;
-      (transitivity ((f ⊔ g) y); [now apply join_ub | apply sup_ub; now exists y]).
-  - rewrite <- join_sup_comm.
-    apply sup_lub. intros y [x [H__x H__eq]]; subst.
-    rewrite join_sup_comm. apply join_increasing; apply sup_ub; now exists x.
-Qed.
-Next Obligation.
-  intros f g H__f H__g S.
-  unfold sg_set_op. fold sup. unfold sg_op. unfold meet. unfold PointwiseMeet.
-  unfold PreserveSup in *. unfold PreserveSgSetOp in *.
-  rewrite H__f. rewrite H__g.
-  apply antisymmetry.
-  - rewrite <- H__f. rewrite <- H__g.
-    apply sup_ub. unfold image.
-  - apply meet_glb. split; apply sup_lub; intros y [x [H__x H__eq]]; subst.
-     transitivity (f x). now apply meet_lb. apply sup_ub. now exists x.
-    transitivity (g x). now apply meet_lb. apply sup_ub. now exists x.
-  - rewrite <- join_sup_comm.
-    apply sup_lub. intros y [x [H__x H__eq]]; subst.
-    rewrite join_sup_comm. apply join_increasing; apply sup_ub; now exists x.
+  intros S H__S S'. apply antisymmetry.
+  - apply sup_lub. intros y [f [H__f H__y]]. rewrite H__y. rewrite H__S; auto.
+    apply sup_lub. intros z [x [H__x H__z]]; rewrite H__z.
+    transitivity (sup (fun z => exists g, g ∈ S /\ z = g x)).
+     apply sup_ub. exists f. now split.
+    apply sup_ub. exists x. now split.
+  - apply sup_lub. intros y [x [H__x H__y]]. rewrite H__y.
+    apply sup_le. intros y' [f [H__f H__y']].
+    exists (f (sup S')). split. exists f. now split.
+    rewrite H__y'. rewrite H__S; auto. apply sup_ub. now exists x.
 Qed.

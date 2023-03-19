@@ -54,45 +54,32 @@ Class CompleteLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A} `{M: Meet
   bottom_infimum: forall x, ⊥ ⊑ x
 }.
 
-Search "CompleteLattice".
+Check Build_CompleteLattice.
 
-Definition PreserveJoin {A B: Type} (f: A -> B) `{Equiv B} `{Join A} `{Join B}: Prop :=
-  PreserveSgOp f (⊔) (⊔).
+Definition Join_Sup {A: Type} `(S: Sup A) `{Equiv A}: Join A := fun x y => sup {{ x; y }}.
+Definition Meet_Sup {A: Type} `(S: Sup A) `{Equiv A} `{Ord A}: Meet A := fun y z => sup (fun x => x ⊑ y /\ x ⊑ z).
+Definition Inf_Sup {A: Type} `(S: Sup A) `{Equiv A} `{Ord A}: Inf A := fun (S: ℘ A) => sup (fun x => forall y, y ∈ S -> x ⊑ y).
+Definition Top_Sup {A: Type} `(S: Sup A): Top A := sup (fun (_: A) => True).
+Definition Bottom_Sup {A: Type} `(S: Sup A): Bottom A := sup ∅.
+Definition Join_Inf {A: Type} `(I: Inf A) `{Equiv A} `{Ord A}: Join A := fun y z => inf (fun x => y ⊑ x /\ z ⊑ x).
+Definition Meet_Inf {A: Type} `(I: Inf A) `{Equiv A}: Meet A := fun x y => inf {{ x; y }}.
+Definition Sup_Inf {A: Type} `(I: Inf A) `{Equiv A} `{Ord A}: Sup A := fun (S: ℘ A) => inf (fun x => forall y, y ∈ S -> y ⊑ x).
+Definition Top_Inf {A: Type} `(I: Inf A): Top A := inf ∅.
+Definition Bottom_Inf {A: Type} `(I: Inf A): Bottom A := inf (fun (_: A) => True).
 
-Definition PreserveMeet {A B: Type} (f: A -> B) `{Equiv B} `{Meet A} `{Meet B}: Prop :=
-  PreserveSgOp f (⊓) (⊓).
+Definition PreserveJoin {A B: Type} (f: A -> B) `{Equiv B} `{Join A} `{Join B}: Prop := PreserveSgOp f (⊔) (⊔).
+Definition PreserveMeet {A B: Type} (f: A -> B) `{Equiv B} `{Meet A} `{Meet B}: Prop := PreserveSgOp f (⊓) (⊓).
+Definition PreserveSup {A B: Type} (f: A -> B) `{Equiv B} `{SA: Sup A} `{SB: Sup B}: Prop := PreserveSgSetOp f SA SB.
+Definition PreserveInf {A B: Type} (f: A -> B) `{Equiv B} `{IA: Inf A} `{IB: Inf B}: Prop := PreserveSgSetOp f IA IB.
+Definition PreserveTop {A B: Type} (f: A -> B) `{Equiv B} `{Top A} `{Top B}: Prop := f ⊤ = ⊤.
+Definition PreserveBottom {A B: Type} (f: A -> B) `{Equiv B} `{Bottom A} `{Bottom B}: Prop := f ⊥ = ⊥.
 
-Definition PreserveSup {A B: Type} (f: A -> B) `{Equiv B} `{SA: Sup A} `{SB: Sup B}: Prop :=
-  PreserveSgSetOp f SA SB.
-
-Definition PreserveInf {A B: Type} (f: A -> B) `{Equiv B} `{IA: Inf A} `{IB: Inf B}: Prop :=
-  PreserveSgSetOp f IA IB.
-
-Definition PreserveTop {A B: Type} (f: A -> B) `{Equiv B} `{Top A} `{Top B}: Prop :=
-  f ⊤ = ⊤.
-
-Definition PreserveBottom {A B: Type} (f: A -> B) `{Equiv B} `{Bottom A} `{Bottom B}: Prop :=
-  f ⊥ = ⊥.
-
-Definition StableJoin {A: Type} (P: A -> Prop) `{Join A}: Prop :=
-  StableSgOp P (⊔).
-
-Definition StableMeet {A: Type} (P: A -> Prop) `{Meet A}: Prop :=
-  StableSgOp P (⊓).
-
-Definition StableSup {A: Type} (P: A -> Prop) `{S: Sup A}: Prop :=
-  StableSgSetOp P S.
-
-Definition StableInf {A: Type} (P: A -> Prop) `{I: Inf A}: Prop :=
-  StableSgSetOp P I.
-
-Definition StableTop {A: Type} (P: A -> Prop) `{Top A}: Prop :=
-  P ⊤.
-
-Definition StableBottom {A: Type} (P: A -> Prop) `{Bottom A}: Prop :=
-  P ⊥.
-
-
+Definition StableJoin {A: Type} (P: A -> Prop) `{Join A}: Prop := StableSgOp P (⊔).
+Definition StableMeet {A: Type} (P: A -> Prop) `{Meet A}: Prop := StableSgOp P (⊓).
+Definition StableSup {A: Type} (P: A -> Prop) `{S: Sup A}: Prop := StableSgSetOp P S.
+Definition StableInf {A: Type} (P: A -> Prop) `{I: Inf A}: Prop := StableSgSetOp P I.
+Definition StableTop {A: Type} (P: A -> Prop) `{Top A}: Prop := P ⊤.
+Definition StableBottom {A: Type} (P: A -> Prop) `{Bottom A}: Prop := P ⊥.
 
 Section Dual.
 

@@ -9,22 +9,26 @@ Import SetNotations.
 Variable P Q: Type.
 Context `{Setoid P} `{Setoid Q}.
 
-Definition post (R: ℘ (P * Q)): ℘ P -> ℘ Q :=
-  fun p y => exists x, x ∈ p /\ R (x, y).
+(* TODO: solve type_classes priorities *)
+Set Printing Implicit.
 
-Definition post_inv (T: ℘ P -> ℘ Q): ℘ (P * Q) :=
+#[program]
+Definition post (R: ℘ (P * Q)): { f : (℘ P -> ℘ Q) | PreserveSup f } :=
+  fun p y => exists x, x ∈ p /\ R (x, y).
+Next Obligation.
+  intros S y.
+
+Definition post_inv (T: { f : (℘ P -> ℘ Q) | PreserveSup f }): ℘ (P * Q) :=
   fun xy => (snd xy) ∈ T {{ (fst xy) }}.
 
 Definition post_dual (R: ℘ (P * Q)): ℘ P -> ℘ Q :=
   fun p => ¬ (post R (¬ p)).
 
-(* TODO: show it is a poset *)
-Check { f : (℘ P -> ℘ Q) | PreserveSup f }.
+Print GaloisConnection.
 
-(*
 #[program]
 Instance post_post_inv_connection:
-  GaloisConnection (℘ (P * Q)) (℘ P -> ℘ Q) post post_inv.
+  GaloisConnection (℘ (P * Q)) ({ f : (℘ P -> ℘ Q) | PreserveSup f }) post post_inv.
 Next Obligation.
   split; intros H.
   - intros xy H__xy.
