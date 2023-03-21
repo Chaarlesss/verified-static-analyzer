@@ -10,7 +10,7 @@ Open Scope vsa.
 
 Class Ord A := ord: relation A.
 Class Equiv A := equiv: relation A.
-#[export]
+#[global]
 Typeclasses Transparent Ord Equiv.
 
 Infix "⊑" := ord (at level 60, no associativity) : vsa.
@@ -37,7 +37,7 @@ Module SetNotations.
   Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20).
   Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
   Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
-  Notation "¬ P" := (fun x => ~ (x ∈ P)) (at level 18).
+  Notation "¬ P" := (fun x => ~ (x ∈ P)) (at level 18). (* BoundedLattice *)
   Notation "{{ x }}" := (fun y => y = x).
   Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
   Notation "∅" := (fun _ => False).
@@ -46,20 +46,66 @@ End SetNotations.
 
 Import SetNotations.
 
-Class SgOp A := sg_op: A -> A -> A.
-Class SgSetOp A := sg_set_op: ℘ A -> A.
-Class MonUnit A := mon_unit: A.
+Class Setoid (A: Type) `{E: Equiv A}: Prop :=
+  setoid_equiv :> Equivalence (=).
 
-#[export]
+Record Sett (A: Type) `{Setoid A}: Type := {
+    set_prop: A -> Prop;
+    set_proper :> Proper ((=) ==> iff) (set_prop)
+  }.
+
+Definition SetContains {A: Type} `{Setoid A} (x: A) (P: Sett A): Prop :=
+  set_prop A P x.
+
+#[program]
+Definition SetSingleton {A: Type} `{Setoid A} (x: A): Sett A :=
+  {| set_prop := fun y => y = x |}.
+Next Obligation.
+  intros y z H__eq. rewrite H__eq. now split.
+Qed.
+
+#[program]
+Definition SetEmpty {A: Type} `{Setoid A}: Sett A :=
+  {| set_prop := fun _ => False |}.
+Next Obligation.
+  repeat intro. now split.
+Qed.
+
+#[program]
+Definition SetFull {A: Type} `{Setoid A}: Sett A :=
+  {| set_prop := fun _ => True |}.
+Next Obligation.
+  repeat intro. now split.
+Qed.
+
+Notation "'℘' A" := (Sett A) (at level 0).
+Notation "x ∈ P" := (SetContains x P) (at level 19).
+Notation "{{ x }}" := (SetSingleton x).
+Notation "∅" := SetEmpty.
+
+Lemma set_contains_singleton {A: Type} `{Setoid A} (x: A):
+  forall u, u ∈ {{ x }} <-> u = x.
+Proof. intros. now split. Qed.
+
+Lemma set_contains_empty {A: Type} `{Setoid A}:
+  forall u, u ∈ ∅ -> False.
+Proof. auto. Qed.
+
+Lemma set_contains_full {A: Type} `{Setoid A}:
+  forall u, u ∈ SetFull.
+Proof. now cbv. Qed.
+
+Class SgOp A `{Setoid A} := sg_op: A -> A -> A.
+Class SgSetOp A `{Setoid A} := sg_set_op: ℘ A -> A.
+Class MonUnit A `{Setoid A} := mon_unit: A.
+
+#[global]
 Typeclasses Transparent SgOp SgSetOp MonUnit.
 
 Infix "&" := sg_op (at level 50, left associativity) : vsa.
 Notation "(&)" := sg_op (only parsing) : vsa.
 Notation "( x &)" := (sg_op x) (only parsing) : vsa.
 Notation "(& x )" := (fun y => y & x) (only parsing) : vsa.
-
-Class Setoid (A: Type) `{E: Equiv A}: Prop :=
-  setoid_equiv :> Equivalence (=).
 
 Class Poset (A: Type) `{E: Equiv A} `{O: Ord A}: Prop := {
   poset_setoid :> Setoid A;
@@ -69,8 +115,8 @@ Class Poset (A: Type) `{E: Equiv A} `{O: Ord A}: Prop := {
   poset_proper :> Proper ((=) ==> (=) ==> iff) (⊑)
 }.
 
-Definition UpperBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
-Definition LowerBound {A: Type} `{O: Ord A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
+Definition UpperBound {A: Type} `{Poset A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
+Definition LowerBound {A: Type} `{Poset A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
 
 Section Dual.
 
@@ -177,19 +223,22 @@ End Pointwise.
 
 Section Powerset.
 
+  Context {X: Type} `{Setoid X}.
+
   #[global]
-  Instance PowersetEquiv {X: Type} : Equiv (℘ X) :=
+  Instance PowersetEquiv: Equiv (℘ X) :=
     fun P Q => forall f, f ∈ P <-> f ∈ Q.
 
   #[global]
-  Instance PowersetOrd {X: Type}: Ord (℘ X) :=
-    fun P Q => P ⊆ Q.
+  Instance PowersetOrd: Ord (℘ X) :=
+    fun P Q => forall x, x ∈ P -> x ∈ Q.
 
   #[program, global]
-  Instance PowersetSetoid {X: Type}: Setoid (℘ X).
+  Instance PowersetSetoid: Setoid (℘ X).
+  Solve All Obligations with firstorder.
 
   #[program, global]
-  Instance PowersetPoset {X: Type}: Poset (℘ X).
+  Instance PowersetPoset: Poset (℘ X).
   Solve All Obligations with firstorder.
 
 End Powerset.

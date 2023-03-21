@@ -6,14 +6,12 @@ From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Basics.
 From VSA Require Import Functions.
 
-Import SetNotations.
-
-Class Meet A := meet: A -> A -> A.
-Class Inf A := inf: ℘ A -> A.
-Class Join A := join: A -> A -> A.
-Class Sup A := sup: ℘ A -> A.
-Class Top A := top: A.
-Class Bottom A := bottom: A.
+Class Meet A `{Setoid A} := meet: A -> A -> A.
+Class Inf A `{Setoid A} := inf: ℘ A -> A.
+Class Join A `{Setoid A} := join: A -> A -> A.
+Class Sup A `{Setoid A} := sup: ℘ A -> A.
+Class Top A `{Setoid A} := top: A.
+Class Bottom A `{Setoid A} := bottom: A.
 
 #[global]
 Typeclasses Transparent Meet Inf Join Sup Top Bottom.

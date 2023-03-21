@@ -2,7 +2,6 @@ From Coq Require Import Relations.Relations.
 From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Basics.
 
-Import SetNotations.
 
 (* The definition of image here is maybe to coarse *)
 (* but we don't have the choice (for now) to use this *)
@@ -10,8 +9,12 @@ Import SetNotations.
 (* to define the classical operations over sets as morphism *)
 (* For instance, we are not able to prove that if two elements are equivalents *)
 (* and one of them is in a set, then the other is also in the set (because it is the same element) *)
-Definition image {X A: Type} (f : X -> A) (S : ℘ X) : ℘ A :=
-   fun y => exists x, x ∈ S /\ y ≡ f x.
+#[program]
+Definition image {X A: Type} `{Setoid X} `{Setoid A} (f : X -> A) (S : ℘ X) : ℘ A :=
+   {| set_prop := fun y => exists x, x ∈ S /\ y = f x |}.
+Next Obligation.
+  firstorder.
+Qed.
 
 Class Increasing {A B: Type} (f: A -> B) `{Poset A} `{Poset B}: Prop :=
   increasing : forall x y, x ⊑ y -> f x ⊑ f y.
