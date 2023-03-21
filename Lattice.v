@@ -52,18 +52,21 @@ Class CompleteLattice (A: Type) `{E: Equiv A} `{O: Ord A} `{J: Join A} `{M: Meet
   bottom_infimum: forall x, ⊥ ⊑ x
 }.
 
-Check Build_CompleteLattice.
+Definition Join_Sup {A: Type} `(S: Sup A): Join A := fun x y => sup {{ x; y }}.
+#[program]
+Definition Meet_Sup {A: Type} `{Poset A} (S: Sup A): Meet A := fun y z => sup {| set_prop := (fun x => x ⊑ y /\ x ⊑ z) |}.
+Next Obligation.
+  intros x x' H__x; split; intros [? ?]; split; now (rewrite <- H__x || rewrite H__x).
+Qed.
 
-Definition Join_Sup {A: Type} `(S: Sup A) `{Equiv A}: Join A := fun x y => sup {{ x; y }}.
-Definition Meet_Sup {A: Type} `(S: Sup A) `{Equiv A} `{Ord A}: Meet A := fun y z => sup (fun x => x ⊑ y /\ x ⊑ z).
-Definition Inf_Sup {A: Type} `(S: Sup A) `{Equiv A} `{Ord A}: Inf A := fun (S: ℘ A) => sup (fun x => forall y, y ∈ S -> x ⊑ y).
-Definition Top_Sup {A: Type} `(S: Sup A): Top A := sup (fun (_: A) => True).
+Definition Inf_Sup {A: Type} `{Poset A} (S: Sup A): Inf A := fun (S: ℘ A) => sup (fun x => forall y, y ∈ S -> x ⊑ y).
+Definition Top_Sup {A: Type} `(S: Sup A): Top A := sup SetFull.
 Definition Bottom_Sup {A: Type} `(S: Sup A): Bottom A := sup ∅.
-Definition Join_Inf {A: Type} `(I: Inf A) `{Equiv A} `{Ord A}: Join A := fun y z => inf (fun x => y ⊑ x /\ z ⊑ x).
-Definition Meet_Inf {A: Type} `(I: Inf A) `{Equiv A}: Meet A := fun x y => inf {{ x; y }}.
-Definition Sup_Inf {A: Type} `(I: Inf A) `{Equiv A} `{Ord A}: Sup A := fun (S: ℘ A) => inf (fun x => forall y, y ∈ S -> y ⊑ x).
+Definition Join_Inf {A: Type} `{Poset A} (I: Inf A): Join A := fun y z => inf (fun x => y ⊑ x /\ z ⊑ x).
+Definition Meet_Inf {A: Type} `(I: Inf A): Meet A := fun x y => inf {{ x; y }}.
+Definition Sup_Inf {A: Type} `{Poset A `(I: Inf A)}: Sup A := fun (S: ℘ A) => inf (fun x => forall y, y ∈ S -> y ⊑ x).
 Definition Top_Inf {A: Type} `(I: Inf A): Top A := inf ∅.
-Definition Bottom_Inf {A: Type} `(I: Inf A): Bottom A := inf (fun (_: A) => True).
+Definition Bottom_Inf {A: Type} `(I: Inf A): Bottom A := inf SetFull.
 
 Definition PreserveJoin {A B: Type} (f: A -> B) `{Equiv B} `{Join A} `{Join B}: Prop := PreserveSgOp f (⊔) (⊔).
 Definition PreserveMeet {A B: Type} (f: A -> B) `{Equiv B} `{Meet A} `{Meet B}: Prop := PreserveSgOp f (⊓) (⊓).

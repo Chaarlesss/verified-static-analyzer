@@ -32,7 +32,7 @@ Notation "x ↾ p" := (exist _ x p) (at level 20) : vsa.
 
 Module SetNotations.
 
-  Notation "'℘' A" := (A -> Prop) (at level 0).
+  (*Notation "'℘' A" := (A -> Prop) (at level 0).
   Notation "x ∈ P" := (P x) (at level 19, only parsing).
   Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20).
   Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
@@ -40,11 +40,9 @@ Module SetNotations.
   Notation "¬ P" := (fun x => ~ (x ∈ P)) (at level 18). (* BoundedLattice *)
   Notation "{{ x }}" := (fun y => y = x).
   Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
-  Notation "∅" := (fun _ => False).
+  Notation "∅" := (fun _ => False). *)
 
 End SetNotations.
-
-Import SetNotations.
 
 Class Setoid (A: Type) `{E: Equiv A}: Prop :=
   setoid_equiv :> Equivalence (=).
@@ -65,6 +63,22 @@ Next Obligation.
 Qed.
 
 #[program]
+Definition SetList {A: Type} `{Setoid A} (l: list A): Sett A :=
+  let f := fun t => (fix f l' :=
+        match l' with
+        | nil => False
+        | cons x q => t = x \/ (f q)
+        end) in
+  {| set_prop := fun x => f x l |}.
+Next Obligation.
+  intros y z H__eq. split; induction l; auto; intros [? | ?].
+  - left. now rewrite <- H__eq.
+  - right. now apply IHl.
+  - left. now rewrite H__eq.
+  - right. now apply IHl.
+Qed.
+
+#[program]
 Definition SetEmpty {A: Type} `{Setoid A}: Sett A :=
   {| set_prop := fun _ => False |}.
 Next Obligation.
@@ -81,6 +95,7 @@ Qed.
 Notation "'℘' A" := (Sett A) (at level 0).
 Notation "x ∈ P" := (SetContains x P) (at level 19).
 Notation "{{ x }}" := (SetSingleton x).
+Notation "{{ x ; y ; .. ; z }}" := (SetList (cons x (cons y (.. (cons z nil) ..)))).
 Notation "∅" := SetEmpty.
 
 Lemma set_contains_singleton {A: Type} `{Setoid A} (x: A):
