@@ -554,6 +554,16 @@ Proof.
   intros P Q. apply sup_lub. intros x [H__P H__Q]. apply meet_glb. split; now apply sup_ub.
 Qed.
 
+Lemma set_decomposition {A: Type} `{CompleteLattice A}:
+  forall (P: ℘ A), P = sup (fun S => exists x, x ∈ P /\ S = {{ x }}).
+Proof.
+  intros P. apply poset_antisym. (* strange behavior *)
+  - intros x H__x. exists {{ x }}. firstorder.
+  - intros x [S [[x' [H__P H__S]] H__x]]. unfold equiv in H__S. unfold PowersetEquiv in H__S.
+    assert (x = x') as H__x'. apply H__S; auto.
+    (* stuck because set is not proper *)
+    rewrite H__x'.
+
 #[program]
 Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} :=
   alt2_Build_SigCompleteLattice (fun f : P -> Q => PreserveSup f) _.

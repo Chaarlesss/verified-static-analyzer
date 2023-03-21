@@ -175,23 +175,24 @@ Section Pointwise.
 
 End Pointwise.
 
-Definition PowersetEquiv {X: Type} : Equiv (℘ X) :=
-  fun P Q => forall f, f ∈ P <-> f ∈ Q.
+Section Powerset.
 
-Definition PowersetOrd {X: Type}: Ord (℘ X) :=
-  fun P Q => P ⊆ Q.
+  #[global]
+  Instance PowersetEquiv {X: Type} : Equiv (℘ X) :=
+    fun P Q => forall f, f ∈ P <-> f ∈ Q.
 
-#[global]
-Hint Extern 10 (Equiv (℘ _)) => apply @PowersetEquiv: typeclass_instances.
-#[global]
-Hint Extern 10 (Ord (℘ _)) => apply @PowersetOrd: typeclass_instances.
+  #[global]
+  Instance PowersetOrd {X: Type}: Ord (℘ X) :=
+    fun P Q => P ⊆ Q.
 
-#[program, global]
-Instance PowersetSetoid {X: Type}: Setoid (℘ X).
+  #[program, global]
+  Instance PowersetSetoid {X: Type}: Setoid (℘ X).
 
-#[program, global]
-Instance PowersetPoset {X: Type}: Poset (℘ X).
-Next Obligation. firstorder. Qed.
+  #[program, global]
+  Instance PowersetPoset {X: Type}: Poset (℘ X).
+  Solve All Obligations with firstorder.
+
+End Powerset.
 
 Section Projection.
 
