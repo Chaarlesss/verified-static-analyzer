@@ -30,27 +30,13 @@ Notation "(≡ x )" := (fun y => eq y x) (only parsing) : vsa.
 
 Notation "x ↾ p" := (exist _ x p) (at level 20) : vsa.
 
-Module SetNotations.
-
-  (*Notation "'℘' A" := (A -> Prop) (at level 0).
-  Notation "x ∈ P" := (P x) (at level 19, only parsing).
-  Notation "P ⊆ Q" := (forall x, x ∈ P -> x ∈ Q) (at level 20).
-  Notation "P ∩ Q" := (fun x => x ∈ P /\ x ∈ Q) (at level 19).
-  Notation "P ∪ Q" := (fun x => x ∈ P \/ x ∈ Q) (at level 19).
-  Notation "¬ P" := (fun x => ~ (x ∈ P)) (at level 18). (* BoundedLattice *)
-  Notation "{{ x }}" := (fun y => y = x).
-  Notation "{{ x ; y ; .. ; z }}" := (fun t => ( .. (t = x \/ t = y) .. \/ t = z)).
-  Notation "∅" := (fun _ => False). *)
-
-End SetNotations.
-
 Class Setoid (A: Type) `{E: Equiv A}: Prop :=
   setoid_equiv :> Equivalence (=).
 
 Record Sett (A: Type) `{Setoid A}: Type := {
     set_prop: A -> Prop;
     set_proper :> Proper ((=) ==> iff) (set_prop)
-  }.
+}.
 
 Definition SetContains {A: Type} `{Setoid A} (x: A) (P: Sett A): Prop :=
   set_prop A P x.
@@ -58,9 +44,7 @@ Definition SetContains {A: Type} `{Setoid A} (x: A) (P: Sett A): Prop :=
 #[program]
 Definition SetSingleton {A: Type} `{Setoid A} (x: A): Sett A :=
   {| set_prop := fun y => y = x |}.
-Next Obligation.
-  intros y z H__eq. rewrite H__eq. now split.
-Qed.
+Next Obligation. solve_proper. Qed.
 
 #[program]
 Definition SetList {A: Type} `{Setoid A} (l: list A): Sett A :=
@@ -71,26 +55,18 @@ Definition SetList {A: Type} `{Setoid A} (l: list A): Sett A :=
         end) in
   {| set_prop := fun x => f x l |}.
 Next Obligation.
-  intros y z H__eq. split; induction l; auto; intros [? | ?].
-  - left. now rewrite <- H__eq.
-  - right. now apply IHl.
-  - left. now rewrite H__eq.
-  - right. now apply IHl.
+  split; induction l; auto; intros [|]; firstorder.
 Qed.
 
 #[program]
 Definition SetEmpty {A: Type} `{Setoid A}: Sett A :=
   {| set_prop := fun _ => False |}.
-Next Obligation.
-  repeat intro. now split.
-Qed.
+Next Obligation. firstorder. Qed.
 
 #[program]
 Definition SetFull {A: Type} `{Setoid A}: Sett A :=
   {| set_prop := fun _ => True |}.
-Next Obligation.
-  repeat intro. now split.
-Qed.
+Next Obligation. firstorder. Qed.
 
 Notation "'℘' A" := (Sett A) (at level 0).
 Notation "x ∈ P" := (SetContains x P) (at level 19).
@@ -100,15 +76,15 @@ Notation "∅" := SetEmpty.
 
 Lemma set_contains_singleton {A: Type} `{Setoid A} (x: A):
   forall u, u ∈ {{ x }} <-> u = x.
-Proof. intros. now split. Qed.
+Proof. reflexivity. Qed.
 
 Lemma set_contains_empty {A: Type} `{Setoid A}:
   forall u, u ∈ ∅ -> False.
-Proof. auto. Qed.
+Proof. contradiction. Qed.
 
 Lemma set_contains_full {A: Type} `{Setoid A}:
   forall u, u ∈ SetFull.
-Proof. now cbv. Qed.
+Proof. firstorder. Qed.
 
 Class SgOp A `{Setoid A} := sg_op: A -> A -> A.
 Class SgSetOp A `{Setoid A} := sg_set_op: ℘ A -> A.
@@ -142,20 +118,20 @@ Section Dual.
 
   Definition DualOrd: Ord A := flip (⊑).
 
+  Hint Unfold DualOrd: core.
+
   Lemma DualOrd_Reflexive {P: Poset A}: Reflexive DualOrd.
-  Proof.
-    cbv. reflexivity.
-  Qed.
+  Proof. firstorder. Qed.
+
+  Hint Unfold Antisymmetric: core.
 
   Lemma DualOrd_Antisymmetric {P: Poset A}: Antisymmetric A E DualOrd.
   Proof.
-    cbv. intros. now apply antisymmetry.
+    autounfold. intros. now apply antisymmetry.
   Qed.
 
   Lemma DualOrd_Transitive {P: Poset A}: Transitive DualOrd.
-  Proof.
-    cbv. intros. now transitivity y.
-  Qed.
+  Proof. firstorder. Qed.
 
   Lemma DualPoset {P: Poset A}: @Poset A E DualOrd.
   Proof.
@@ -164,7 +140,7 @@ Section Dual.
     - exact DualOrd_Reflexive.
     - exact DualOrd_Antisymmetric.
     - exact DualOrd_Transitive.
-    - cbv. split; intro.
+    - repeat intro. split; intro; cbv.
         rewrite <- H0. rewrite <- H. assumption.
         rewrite H0. rewrite H. assumption.
   Defined.
@@ -199,20 +175,13 @@ Section Pointwise.
   Instance PointwiseOrd: Ord (X -> A) :=
     fun f g => forall (x: X), f x ⊑ g x.
 
-  #[global]
+  #[program, global]
   Instance PointwiseEquiv_Equivalence {St: Setoid A}: Equivalence PointwiseEquiv.
-  Proof.
-    constructor; repeat intro.
-    - reflexivity.
-    - symmetry. apply H.
-    - transitivity (y x0). apply H. apply H0.
-  Qed.
+  Solve All Obligations with firstorder.
 
   #[global]
   Instance PointwiseOrd_Reflexive {P: Poset A}: Reflexive PointwiseOrd.
-  Proof.
-    intros f x. reflexivity.
-  Qed.
+  Proof. firstorder. Qed.
 
   #[global]
   Instance PointwiseOrd_Antisymmetric {P: Poset A}: Antisymmetric (X -> A) PointwiseEquiv PointwiseOrd.
@@ -222,9 +191,7 @@ Section Pointwise.
 
   #[global]
   Instance PointwiseOrd_Transitive {P: Poset A}: Transitive PointwiseOrd.
-  Proof.
-    intros f g h H1 H2 x. now transitivity (g x).
-  Qed.
+  Proof. firstorder. Qed.
 
   #[program, global]
   Instance PointwisePoset {P: Poset A}: Poset (X -> A).

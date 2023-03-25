@@ -59,10 +59,16 @@ Next Obligation.
   intros x x' H__x; split; intros [? ?]; split; now (rewrite <- H__x || rewrite H__x).
 Qed.
 
-Definition Inf_Sup {A: Type} `{Poset A} (S: Sup A): Inf A := fun (S: ℘ A) => sup (fun x => forall y, y ∈ S -> x ⊑ y).
+#[program]
+Definition Inf_Sup {A: Type} `{Poset A} (S: Sup A): Inf A :=
+  fun (S: ℘ A) => sup {| set_prop := (fun x => forall y, y ∈ S -> x ⊑ y) |}.
+Next Obligation. solve_proper. Qed.
 Definition Top_Sup {A: Type} `(S: Sup A): Top A := sup SetFull.
 Definition Bottom_Sup {A: Type} `(S: Sup A): Bottom A := sup ∅.
-Definition Join_Inf {A: Type} `{Poset A} (I: Inf A): Join A := fun y z => inf (fun x => y ⊑ x /\ z ⊑ x).
+#[program]
+Definition Join_Inf {A: Type} `{Poset A} (I: Inf A): Join A :=
+  fun y z => inf {| set_prop := (fun x => y ⊑ x /\ z ⊑ x) |}.
+Next Obligation. solve_proper. Qed.
 Definition Meet_Inf {A: Type} `(I: Inf A): Meet A := fun x y => inf {{ x; y }}.
 Definition Sup_Inf {A: Type} `{Poset A `(I: Inf A)}: Sup A := fun (S: ℘ A) => inf (fun x => forall y, y ∈ S -> y ⊑ x).
 Definition Top_Inf {A: Type} `(I: Inf A): Top A := inf ∅.

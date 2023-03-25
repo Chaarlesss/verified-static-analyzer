@@ -47,5 +47,3 @@ Next Obligation.
     (* Decomposition of a set into each element??? *)
     (* Use the fact that it is U-morphism *)
     apply H.
-
-*)
