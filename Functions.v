@@ -39,7 +39,7 @@ Class PreserveSgOp {A B: Type} `{Equiv A} `{Equiv B} (f: A → B) `(!SgOp A) `(!
 Class PreserveSgSetOp {A B: Type} `{Equiv A} `{Setoid B} (f: A → B) (SA: SgSetOp A) (SB: SgSetOp B): Prop :=
   preserve_sg_set_op : forall (S: ℘ A), f (SA S) = SB (Image f S).
 
-(* Here, we see it the first time we use the fact that a property (here P) can be seen as the *)
+(* Here, it is the first time we use the fact that a property (here P) can be seen as the *)
 (* set of elements which verify it*)
 Class StableSgOp {A : Type} `{Equiv A} (P: ℘ A) `(!SgOp A): Prop :=
   stable_sg_op : forall x y, P x -> P y -> P (x & y).

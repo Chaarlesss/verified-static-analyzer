@@ -235,9 +235,11 @@ Qed.
 Definition SetProp {A: Type} `{Setoid A} (P: A -> Prop) `{!Proper ((=) ==> iff) P}: ℘ A :=
   Build_Sett _ _ P _.
 #[program]
-Definition SetEmpty {A: Type}: ℘ A := Build_Sett _ _ (fun _ => False) _.
+Definition SetEmpty {A: Type} `{Setoid A}: ℘ A := Build_Sett _ _ (fun _ => False) _.
+Next Obligation. firstorder. Qed.
 #[program]
-Definition SetFull {A: Type}: ℘ A := Build_Sett _ _ (fun _ => True) _.
+Definition SetFull {A: Type} `{Setoid A}: ℘ A := Build_Sett _ _ (fun _ => True) _.
+Next Obligation. firstorder. Qed.
 
 Notation "x ∈ P" := (SetContains x P) (at level 19).
 Notation "{{ x }}" := (SetSingleton x).
@@ -293,8 +295,8 @@ Proof.
   rewrite H__fg. rewrite H__eq. reflexivity.
 Qed.
 
-Class SgOp A `{Equiv A} := sg_op: A → A → A.
-Class SgSetOp A `{Equiv A} := sg_set_op: ℘ A → A.
+Class SgOp A `{Equiv A} := sg_op: A -> A -> A.
+Class SgSetOp A `{Equiv A} := sg_set_op: ℘ A -> A.
 Class MonUnit A := mon_unit: A.
 
 #[global]
