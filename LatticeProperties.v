@@ -188,6 +188,15 @@ Section Sup.
     transitivity x'. assumption. now apply sup_ub.
   Qed.*)
 
+  #[global]
+  Add Parametric Morphism: sup
+    with signature (=) ==> (=) as Sup_Morphism.
+  Proof.
+    intros P Q H__PQ. apply antisymmetry; apply sup_lub; intros x H__x; apply sup_ub.
+      now rewrite <- H__PQ.
+    now rewrite H__PQ.
+  Qed.
+
 End Sup.
 
 Section Inf.
@@ -199,6 +208,15 @@ Section Inf.
   Admitted.
 
   (* Lemma inf_decreasing *)
+
+  #[global]
+  Add Parametric Morphism: inf
+    with signature (=) ==> (=) as Inf_Morphism.
+  Proof.
+    intros P Q H__PQ. apply antisymmetry; apply inf_glb; intros x H__x; apply inf_lb.
+      now rewrite H__PQ.
+    now rewrite <- H__PQ.
+  Qed.
 
 End Inf.
 
@@ -328,14 +346,39 @@ Section Pointwise.
 
   #[export]
   Instance PointwiseSup `{!CompleteLattice A}: Sup (X → A).
-    refine (fun (S: ℘ (X → A)) => λ x ⇒ sup {{ a | exists f, f ∈ S /\ a = f x }}).
-    (* requires sup to be a morphism, to be proved later *)
-  Admitted.
+    (* TODO: ugly proof *)
+    unshelve refine (fun (S: ℘ (X → A)) => λ x ⇒ sup {{ a | exists f, f ∈ S /\ a = f x }}).
+    5: { solve_proper. }
+    apply Sup0. apply CompleteLattice0.
+    intros P Q H__PQ.
+    (* TODO: custom f_equal *)
+    remember ({{ a | exists f : X → A, f ∈ S /\ a = f P}}) as S1.
+    remember ({{ a | exists f : X → A, f ∈ S /\ a = f Q}}) as S2.
+    assert (S1 = S2).
+    {
+      apply poset_antisym; subst; intros x [f [H__f H__x]].
+      - exists f. split; auto. now rewrite <- H__PQ.
+      - exists f. split; auto. now rewrite H__PQ.
+    }
+    now rewrite H.
+  Defined.
 
   #[export]
   Instance PointwiseInf `{!CompleteLattice A}: Inf (X → A).
-    refine (fun (S: ℘ (X → A)) => λ x ⇒ inf {{ a | exists f, f ∈ S /\ a = f x }}).
-  Admitted.
+    unshelve refine (fun (S: ℘ (X → A)) => λ x ⇒ inf {{ a | exists f, f ∈ S /\ a = f x }}).
+    5: { solve_proper. }
+    apply Inf0. apply CompleteLattice0.
+    intros P Q H__PQ.
+    remember ({{ a | exists f : X → A, f ∈ S /\ a = f P}}) as S1.
+    remember ({{ a | exists f : X → A, f ∈ S /\ a = f Q}}) as S2.
+    assert (S1 = S2).
+    {
+      apply poset_antisym; subst; intros x [f [H__f H__x]].
+      - exists f. split; auto. now rewrite <- H__PQ.
+      - exists f. split; auto. now rewrite H__PQ.
+    }
+    now rewrite H.
+  Defined.
 
   #[export]
   Instance PointwiseTop `{!CompleteLattice A}: Top (X → A).
@@ -373,20 +416,20 @@ Section Pointwise.
   #[program, export]
   Instance PointwiseCompleteLattice `{!CompleteLattice A}: CompleteLattice (X → A).
   Next Obligation.
-  Admitted.
-    (*split.
-    - intros H f H__f x. transitivity (sup S x); auto.
-      apply sup_ub. exists f. split; auto. reflexivity.
-    - intros H x. apply sup_lub. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
-  Qed.*)
-  Next Obligation.
-  Admitted.
-  (*
     split.
-    - intros H f H__f x. transitivity (inf S0 x); auto.
-      apply inf_lb. exists f. split; auto. reflexivity.
-    - intros H x. apply inf_glb. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
+    - intros H f H__f x. transitivity (sup S x); auto.
+      simpl. apply sup_ub. now exists f.
+    - intros H x. simpl. apply sup_lub. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
+  Qed.
+  Next Obligation.
+    split.
+    - intros H f H__f x. transitivity (inf S x); auto.
+      simpl. apply inf_lb. now exists f.
+    - intros H x. simpl. apply inf_glb. intros a [g [H__g H__a]]; subst.
+      (* Coq bug? *)
+      (* rewrite H__a. now apply H.
   Qed.*)
+  Admitted.
   Next Obligation.
     intros y. apply top_supremum.
   Qed.
@@ -401,32 +444,72 @@ Section Powerset.
   Context (X: Type) `{Setoid X}.
 
   #[export]
-  Instance PowersetJoin : Join (℘ X) := fun P Q x => x ∈ P \/ x ∈ Q.
+  Instance PowersetJoin : Join (℘ X).
+    refine (fun P Q => {{ x | x ∈ P \/ x ∈ Q }}).
+    solve_proper.
+  Defined.
+
   #[export]
-  Instance PowersetMeet : Meet (℘ X) := fun P Q x => x ∈ P /\ x ∈ Q.
+  Instance PowersetMeet : Meet (℘ X).
+    refine (fun P Q => {{ x | x ∈ P /\ x ∈ Q}}).
+    solve_proper.
+  Defined.
+
   #[export]
-  Instance PowersetSup : Sup (℘ X) := fun (S: ℘ (℘ X)) (x: X) => exists P, P ∈ S /\ x ∈ P.
+  Instance PowersetSup : Sup (℘ X).
+    refine (fun (S: ℘ (℘ X)) => {{ x | exists P, P ∈ S /\ x ∈ P }}).
+    solve_proper.
+  Defined.
+
   #[export]
-  Instance PowersetInf : Inf (℘ X) := fun (S: ℘ (℘ X)) (x: X) => forall P, P ∈ S -> x ∈ P.
+  Instance PowersetInf : Inf (℘ X).
+    refine (fun (S: ℘ (℘ X)) => {{ x | forall P, P ∈ S -> x ∈ P }}).
+    solve_proper.
+  Defined.
+
   #[export]
-  Instance PowersetTop : Top (℘ X) := fun _ => True.
+  Instance PowersetTop : Top (℘ X) := SetFull.
   #[export]
-  Instance PowersetBottom : Bottom (℘ X) := fun _ => False.
+  Instance PowersetBottom : Bottom (℘ X) := ∅.
 
   #[program, export]
   Instance PowersetMeetSemiLattice: MeetSemiLattice (℘ X).
-  Solve All Obligations with firstorder.
+  Next Obligation.
+    split.
+     intros [H__x H__y] e H__e. specialize (H__x e). specialize (H__y e). simpl in *; firstorder.
+    intros H__u. split; intros e H__e; specialize (H__u e); simpl in *; firstorder.
+  Qed.
 
   #[program, export]
   Instance PowersetJoinSemiLattice: JoinSemiLattice (℘ X).
-  Solve All Obligations with firstorder.
+  Next Obligation.
+    split.
+     intros [H__x H__y] e H__e. specialize (H__x e). specialize (H__y e). simpl in *. firstorder.
+    intros H__u. split; intros e H__e; specialize (H__u e); simpl in *; firstorder.
+  Qed.
 
   #[program, export]
   Instance PowersetLattice: Lattice (℘ X).
 
   #[program, global]
   Instance PowersetCompleteLattice: CompleteLattice (℘ X).
-  Solve All Obligations with firstorder.
+  Next Obligation.
+    split.
+    - intros H__u x H__x. transitivity (sup S); auto.
+      intros t H__t. now exists x.
+    - intros H__u t [v [H__v H__t]]. now apply (H__u v).
+  Qed.
+  Next Obligation.
+    split.
+    - intros H__u x H__x. transitivity (inf S); firstorder.
+    - intros H__u t H__t v H__v. firstorder.
+  Qed.
+  Next Obligation.
+    intros t H__t. now simpl.
+  Qed.
+  Next Obligation.
+    intros t H__t. contradiction.
+  Qed.
 
 End Powerset.
 

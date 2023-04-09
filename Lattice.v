@@ -95,21 +95,21 @@ Section Dual.
   Definition DualTop: Bottom A := (⊤).
   Definition DualBottom: Top A := (⊥).
 
-  Definition DualMeetSemiLattice {MSL: MeetSemiLattice A}: @JoinSemiLattice A E (DualOrd A) DualMeet.
+  Definition DualMeetSemiLattice {MSL: MeetSemiLattice A}: @JoinSemiLattice _ _ (DualOrd A) DualMeet.
   Proof.
     constructor.
     - apply DualPoset. apply MSL.
     - cbv. apply meet_glb.
   Defined.
 
-  Definition DualJoinSemiLattice {JSL: JoinSemiLattice A}: @MeetSemiLattice A E (DualOrd A) DualJoin.
+  Definition DualJoinSemiLattice {JSL: JoinSemiLattice A}: @MeetSemiLattice _ _ (DualOrd A) DualJoin.
   Proof.
     constructor.
     - apply DualPoset. apply JSL.
     - cbv. apply join_lub.
   Defined.
 
-  Definition DualLattice {L: Lattice A}: @Lattice A E (DualOrd A) DualMeet DualJoin.
+  Definition DualLattice {L: Lattice A}: @Lattice _ _ (DualOrd A) DualMeet DualJoin.
   Proof.
     constructor.
     - apply DualMeetSemiLattice.
@@ -117,7 +117,7 @@ Section Dual.
   Defined.
 
   Definition DualCompleteLattice {L: CompleteLattice A}:
-      @CompleteLattice A E (DualOrd A) DualMeet DualJoin DualInf DualSup DualBottom DualTop.
+      @CompleteLattice _ _ (DualOrd A) DualMeet DualJoin DualInf DualSup DualBottom DualTop.
   Proof.
     constructor.
     - apply DualLattice.

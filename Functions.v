@@ -5,11 +5,10 @@ From Coq Require Import Classes.RelationClasses.
 From VSA Require Import Basics.
 
 #[program]
-Definition Image {X A: Type} `{Equiv X} `{Setoid A} (f : X → A) (S : ℘ X) : ℘ A :=
-   Build_Sett _ _ (fun y => exists x, x ∈ S /\ y = f x) _.
-Next Obligation.
-  intros x y H__xy. split; intros [z [? H__f]]; exists z; firstorder.
-Qed.
+Definition Image {X A: Type} `{Equiv X} `{Setoid A} (f : X → A) (S : ℘ X) : ℘ A.
+  refine {{ y | exists x, x ∈ S /\ y = f x }}.
+  solve_proper.
+Defined.
 
 #[global]
 Instance ImageProper {X A: Type} `{Setoid X} `{Setoid A}:

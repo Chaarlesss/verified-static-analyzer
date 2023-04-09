@@ -28,16 +28,17 @@ Notation "(≡)" := eq (only parsing) : vsa.
 Notation "( x ≡)" := (eq x) (only parsing) : vsa.
 Notation "(≡ x )" := (fun y => eq y x) (only parsing) : vsa.
 
-Class Setoid (A: Type) `{E: Equiv A}: Prop :=
+Class Setoid (A: Type) `{!Equiv A}: Prop :=
   setoid_equiv :> Equivalence (=).
 
-Class Poset (A: Type) `{E: Equiv A} `{O: Ord A}: Prop := {
+Class Poset (A: Type) `{!Equiv A} `{!Ord A}: Prop := {
   poset_setoid :> Setoid A;
   poset_refl :> Reflexive (⊑);
   poset_antisym :> Antisymmetric A (=) (⊑);
   poset_trans :> Transitive (⊑);
   poset_proper :> Proper ((=) ==> (=) ==> iff) (⊑)
 }.
+
 
 Section Dual.
 
