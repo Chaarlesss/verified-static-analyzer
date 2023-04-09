@@ -155,13 +155,15 @@ Proof. now apply (projected_setoid (@proj1_sig _ P)). Qed.
 Instance SigPoset {A: Type} `{Poset A} (P : A -> Prop) : Poset (sig P).
 Proof. now apply (projected_poset (@proj1_sig _ P)). Qed.
 
-Structure Morphism (X A: Type) `{!Equiv X} `{!Equiv A} : Type := {
+Class Morphism (X A: Type) `{!Equiv X} `{!Equiv A} : Type := {
   morphism : X -> A;
   morphism_proper :> Proper ((=) ==> (=)) morphism
 }.
 
 Coercion morphism : Morphism >-> Funclass.
 Notation "X → A" := (Morphism X A) (at level 80, right associativity).
+Notation "'λ' x ⇒ P" := ({| morphism := (fun x => P); morphism_proper := _ |})
+                         (at level 200, x binder, right associativity).
 
 Section Pointwise.
 

@@ -85,7 +85,8 @@ Section Join.
   Qed.
 
   #[global]
-  Instance: Proper ((=) ==> (=) ==> (=)) (⊔).
+  Add Parametric Morphism: (⊔)
+    with signature (=) ==> (=) ==> (=) as Join_Morphism.
   Proof.
     intros x y H1 x' y' H2. apply antisymmetry; apply join_lub; split.
     - rewrite H1. now apply join_ub.
@@ -205,8 +206,6 @@ Section AlternativeOperators.
 
   Context {A: Type} `{Poset A}.
 
-  Set Printing Implicit.
-
   Definition Join_Sup (S: Sup A): Join A := fun x y => sup {{ x; y }}.
 
   Definition Meet_Sup (S: Sup A): Meet A.
@@ -268,14 +267,17 @@ Proof.
        intros [H__x H__y]. apply sup_lub. intros z [H__z | H__z]%set_contains_pair; now rewrite H__z.
       intros H__u. split; apply sup_lub with {{ x; y }}; auto; apply set_contains_pair; now intuition.
     + intros x y u. split.
-       intros [H__x H__y]. apply sup_lub with {{ z | z ⊑ x /\ z ⊑ y }}. reflexivity.
-       (* TODO *)
+       intros [H__x H__y]. eapply sup_lub. (* TODO: provide better way to do this kind of reasoning? *)
+       Unshelve. 4: { refine {{ z | z ⊑ x /\ z ⊑ y }}. solve_proper. }. reflexivity.
+       (* TODO: auto unfold *)
        unfold SetContains. unfold sett. unfold SetProp. auto.
       intros H__u. split; transitivity (Meet_Sup S x y); auto; apply sup_lub; now intros z [H__x H__y].
   - intros Q u. unfold inf. unfold Inf_Sup. split.
-     intros H__u x H__x. transitivity (sup (fun x : A => forall t, t ∈ Q -> x ⊑ t)); auto.
-     apply sup_lub. now auto.
-    intros H__u. now apply sup_lub with (fun x : A => forall t, t ∈ Q -> x ⊑ t).
+     intros H__u x H__x.
+     etransitivity. apply H__u. apply sup_lub. now auto.
+    intros H__u. remember {{ x | forall y : A, y ∈ Q -> x ⊑ y}} as SS.
+    apply sup_lub with SS. reflexivity.
+    unfold SetContains. rewrite HeqSS. unfold sett. simpl. apply H__u.
   - intros x. now apply sup_lub with SetFull.
   - intros x. now apply sup_lub.
 Qed.
@@ -310,23 +312,47 @@ End PropLattice.
 
 Section Pointwise.
 
-  Context (X A: Type) {E: Equiv A} {O: Ord A} {J: Join A} {M: Meet A} {S: Sup A} {I: Inf A} {T: Top A} {B: Bottom A}.
+  Context (X A: Type) `{!Equiv X} `{!Equiv A} `{!Ord A} `{!Join A} `{!Meet A} `{!Sup A} `{!Inf A} `{!Top A} `{!Bottom A}.
 
   #[export]
-  Instance PointwiseJoin: Join (X -> A) := fun f g (x: X) => f x ⊔ g x.
+  Instance PointwiseJoin `{!JoinSemiLattice A}: Join (X → A).
+    refine (fun f g => λ x ⇒ f x ⊔ g x).
+    solve_proper.
+  Defined.
+
   #[export]
-  Instance PointwiseMeet: Meet (X -> A) := fun f g (x: X) => f x ⊓ g x.
+  Instance PointwiseMeet `{!MeetSemiLattice A}: Meet (X → A).
+    refine (fun f g => λ x ⇒ f x ⊓ g x).
+    solve_proper.
+  Defined.
+
   #[export]
-  Instance PointwiseSup: Sup (X -> A) := fun (S: ℘ (X -> A)) (x: X) => sup (fun a => exists f, f ∈ S /\ a = f x).
+  Instance PointwiseSup `{!CompleteLattice A}: Sup (X → A).
+    refine (fun (S: ℘ (X → A)) => λ x ⇒ sup {{ a | exists f, f ∈ S /\ a = f x }}).
+    (* requires sup to be a morphism, to be proved later *)
+  Admitted.
+
   #[export]
-  Instance PointwiseInf: Inf (X -> A) := fun (S: ℘ (X -> A)) (x: X) => inf (fun a => exists f, f ∈ S /\ a = f x).
+  Instance PointwiseInf `{!CompleteLattice A}: Inf (X → A).
+    refine (fun (S: ℘ (X → A)) => λ x ⇒ inf {{ a | exists f, f ∈ S /\ a = f x }}).
+  Admitted.
+
   #[export]
-  Instance PointwiseTop: Top (X -> A) := fun _ => ⊤.
+  Instance PointwiseTop `{!CompleteLattice A}: Top (X → A).
+    refine (λ _ ⇒ ⊤).
+    instantiate (1 := _).
+    firstorder.
+  Defined.
+
   #[export]
-  Instance PointwiseBottom: Bottom (X -> A) := fun _ => ⊥.
+  Instance PointwiseBottom `{!CompleteLattice A}: Bottom (X → A).
+    refine (λ _ ⇒ ⊥).
+    instantiate (1 := _).
+    firstorder.
+  Defined.
 
   #[program, export]
-  Instance PointwiseJoinSemiLattice {JSL: JoinSemiLattice A}: JoinSemiLattice (X -> A).
+  Instance PointwiseJoinSemiLattice `{!JoinSemiLattice A}: JoinSemiLattice (X → A).
   Next Obligation.
     split.
     - intros [? ?] ?. apply join_lub. auto.
@@ -334,7 +360,7 @@ Section Pointwise.
   Qed.
 
   #[program, export]
-  Instance PointwiseMeetSemiLattice {JSL: MeetSemiLattice A}: MeetSemiLattice (X -> A).
+  Instance PointwiseMeetSemiLattice `{!MeetSemiLattice A}: MeetSemiLattice (X → A).
   Next Obligation.
     split.
     - intros [? ?] ?. apply meet_glb. auto.
@@ -342,22 +368,25 @@ Section Pointwise.
   Qed.
 
   #[program, export]
-  Instance PointwiseLattice {L: Lattice A}: Lattice (X -> A).
+  Instance PointwiseLattice `{!Lattice A}: Lattice (X → A).
 
   #[program, export]
-  Instance PointwiseCompleteLattice {L: CompleteLattice A}: CompleteLattice (X -> A).
+  Instance PointwiseCompleteLattice `{!CompleteLattice A}: CompleteLattice (X → A).
   Next Obligation.
-    split.
-    - intros H f H__f x. transitivity (sup S0 x); auto.
+  Admitted.
+    (*split.
+    - intros H f H__f x. transitivity (sup S x); auto.
       apply sup_ub. exists f. split; auto. reflexivity.
     - intros H x. apply sup_lub. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
-  Qed.
+  Qed.*)
   Next Obligation.
+  Admitted.
+  (*
     split.
     - intros H f H__f x. transitivity (inf S0 x); auto.
       apply inf_lb. exists f. split; auto. reflexivity.
     - intros H x. apply inf_glb. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
-  Qed.
+  Qed.*)
   Next Obligation.
     intros y. apply top_supremum.
   Qed.
