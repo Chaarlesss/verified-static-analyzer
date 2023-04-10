@@ -247,8 +247,8 @@ Next Obligation. firstorder. Qed.
 Notation "x ∈ P" := (SetContains x P) (at level 19).
 Notation "{{ x }}" := (SetSingleton x).
 Notation "{{ x ; y ; .. ; z }}" := (SetList (cons x (cons y (.. (cons z nil) ..)))).
-Notation "{{ x | P }}" := (SetProp (fun x => P)).
-Notation "{{ x : A | P }}" := (SetProp (fun x : A => P)).
+Notation "{{{ x | P }}}" := (SetProp (fun x => P)) (x binder).
+(* Notation "{{ x : A | P }}" := (SetProp (fun x : A => P)). *)
 Notation "∅" := SetEmpty.
 
 Lemma set_contains_singleton {A: Type} `{Setoid A} (x: A):
@@ -312,3 +312,8 @@ Notation "(& x )" := (fun y => y & x) (only parsing) : vsa.
 
 Definition UpperBound {A: Type} `{Poset A} (S: ℘ A) (u: A) := forall x, x ∈ S -> x ⊑ u.
 Definition LowerBound {A: Type} `{Poset A} (S: ℘ A) (u: A) := forall x, x ∈ S -> u ⊑ x.
+
+Definition proj1_sig_morphism {A: Type} `{Equiv A} `{P: ℘ A}: sig P → A.
+  refine (λ x ⇒ `x).
+  intros x y H__xy. apply H__xy.
+Defined.

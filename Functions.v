@@ -6,7 +6,7 @@ From VSA Require Import Basics.
 
 #[program]
 Definition Image {X A: Type} `{Equiv X} `{Setoid A} (f : X → A) (S : ℘ X) : ℘ A.
-  refine {{ y | exists x, x ∈ S /\ y = f x }}.
+  refine {{{ y | exists x, x ∈ S /\ y = f x }}}.
   solve_proper.
 Defined.
 

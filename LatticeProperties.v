@@ -227,12 +227,12 @@ Section AlternativeOperators.
   Definition Join_Sup (S: Sup A): Join A := fun x y => sup {{ x; y }}.
 
   Definition Meet_Sup (S: Sup A): Meet A.
-    refine (fun y z => @sup _ _ S {{ x | x ⊑ y /\ x ⊑ z }}).
+    refine (fun y z => @sup _ _ S {{{ x | x ⊑ y /\ x ⊑ z }}}).
     solve_proper.
   Defined.
 
   Definition Inf_Sup (S: Sup A): Inf A.
-    refine (fun (P: ℘ A) => @sup _ _ S {{ x | forall y, y ∈ P -> x ⊑ y }}).
+    refine (fun (P: ℘ A) => @sup _ _ S {{{ x | forall y, y ∈ P -> x ⊑ y }}}).
     solve_proper.
   Defined.
 
@@ -240,14 +240,14 @@ Section AlternativeOperators.
   Definition Bottom_Sup {A: Type} `{Setoid A} (S: Sup A): Bottom A := sup ∅.
 
   Definition Join_Inf (I: Inf A): Join A.
-    refine (fun y z => @inf _ _ I {{ x | y ⊑ x /\ z ⊑ x }}).
+    refine (fun y z => @inf _ _ I {{{ x | y ⊑ x /\ z ⊑ x }}}).
     solve_proper.
   Defined.
 
   Definition Meet_Inf (I: Inf A): Meet A := fun x y => inf {{ x; y }}.
 
   Definition Sup_Inf (I: Inf A): Sup A.
-    refine (fun (S: ℘ A) => @inf _ _ I {{ x | forall y, y ∈ S -> y ⊑ x }}).
+    refine (fun (S: ℘ A) => @inf _ _ I {{{ x | forall y, y ∈ S -> y ⊑ x }}}).
     solve_proper.
   Defined.
 
@@ -286,14 +286,14 @@ Proof.
       intros H__u. split; apply sup_lub with {{ x; y }}; auto; apply set_contains_pair; now intuition.
     + intros x y u. split.
        intros [H__x H__y]. eapply sup_lub. (* TODO: provide better way to do this kind of reasoning? *)
-       Unshelve. 4: { refine {{ z | z ⊑ x /\ z ⊑ y }}. solve_proper. }. reflexivity.
+       Unshelve. 4: { refine {{{ z | z ⊑ x /\ z ⊑ y }}}. solve_proper. }. reflexivity.
        (* TODO: auto unfold *)
        unfold SetContains. unfold sett. unfold SetProp. auto.
       intros H__u. split; transitivity (Meet_Sup S x y); auto; apply sup_lub; now intros z [H__x H__y].
   - intros Q u. unfold inf. unfold Inf_Sup. split.
      intros H__u x H__x.
      etransitivity. apply H__u. apply sup_lub. now auto.
-    intros H__u. remember {{ x | forall y : A, y ∈ Q -> x ⊑ y}} as SS.
+    intros H__u. remember {{{ x | forall y : A, y ∈ Q -> x ⊑ y}}} as SS.
     apply sup_lub with SS. reflexivity.
     unfold SetContains. rewrite HeqSS. unfold sett. simpl. apply H__u.
   - intros x. now apply sup_lub with SetFull.
@@ -347,13 +347,13 @@ Section Pointwise.
   #[export]
   Instance PointwiseSup `{!CompleteLattice A}: Sup (X → A).
     (* TODO: ugly proof *)
-    unshelve refine (fun (S: ℘ (X → A)) => λ x ⇒ sup {{ a | exists f, f ∈ S /\ a = f x }}).
+    unshelve refine (fun (S: ℘ (X → A)) => λ x ⇒ sup {{{ a | exists f, f ∈ S /\ a = f x }}}).
     5: { solve_proper. }
     apply Sup0. apply CompleteLattice0.
     intros P Q H__PQ.
     (* TODO: custom f_equal *)
-    remember ({{ a | exists f : X → A, f ∈ S /\ a = f P}}) as S1.
-    remember ({{ a | exists f : X → A, f ∈ S /\ a = f Q}}) as S2.
+    remember ({{{ a | exists f : X → A, f ∈ S /\ a = f P}}}) as S1.
+    remember ({{{ a | exists f : X → A, f ∈ S /\ a = f Q}}}) as S2.
     assert (S1 = S2).
     {
       apply poset_antisym; subst; intros x [f [H__f H__x]].
@@ -365,12 +365,13 @@ Section Pointwise.
 
   #[export]
   Instance PointwiseInf `{!CompleteLattice A}: Inf (X → A).
-    unshelve refine (fun (S: ℘ (X → A)) => λ x ⇒ inf {{ a | exists f, f ∈ S /\ a = f x }}).
-    5: { solve_proper. }
+    unshelve refine (fun (S: ℘ (X → A)) => λ x ⇒ inf {{{ a | exists f, f ∈ S /\ a = f x }}}).
+    4: { apply Equiv1. }
+    4: { solve_proper. }
     apply Inf0. apply CompleteLattice0.
     intros P Q H__PQ.
-    remember ({{ a | exists f : X → A, f ∈ S /\ a = f P}}) as S1.
-    remember ({{ a | exists f : X → A, f ∈ S /\ a = f Q}}) as S2.
+    remember ({{{ a | exists f : X → A, f ∈ S /\ a = f P}}}) as S1.
+    remember ({{{ a | exists f : X → A, f ∈ S /\ a = f Q}}}) as S2.
     assert (S1 = S2).
     {
       apply poset_antisym; subst; intros x [f [H__f H__x]].
@@ -419,17 +420,14 @@ Section Pointwise.
     split.
     - intros H f H__f x. transitivity (sup S x); auto.
       simpl. apply sup_ub. now exists f.
-    - intros H x. simpl. apply sup_lub. intros a [g [H__g H__a]]; subst. rewrite H__a. now apply H.
+    - intros H x. simpl. apply sup_lub. intros a [g [H__g H__a]]. rewrite H__a. now apply H.
   Qed.
   Next Obligation.
     split.
     - intros H f H__f x. transitivity (inf S x); auto.
       simpl. apply inf_lb. now exists f.
-    - intros H x. simpl. apply inf_glb. intros a [g [H__g H__a]]; subst.
-      (* Coq bug? *)
-      (* rewrite H__a. now apply H.
-  Qed.*)
-  Admitted.
+    - intros H x. simpl. apply inf_glb. intros a [g [H__g H__a]]. rewrite H__a. now apply H.
+  Qed.
   Next Obligation.
     intros y. apply top_supremum.
   Qed.
@@ -445,25 +443,25 @@ Section Powerset.
 
   #[export]
   Instance PowersetJoin : Join (℘ X).
-    refine (fun P Q => {{ x | x ∈ P \/ x ∈ Q }}).
+    refine (fun P Q => {{{ x | x ∈ P \/ x ∈ Q }}}).
     solve_proper.
   Defined.
 
   #[export]
   Instance PowersetMeet : Meet (℘ X).
-    refine (fun P Q => {{ x | x ∈ P /\ x ∈ Q}}).
+    refine (fun P Q => {{{ x | x ∈ P /\ x ∈ Q}}}).
     solve_proper.
   Defined.
 
   #[export]
   Instance PowersetSup : Sup (℘ X).
-    refine (fun (S: ℘ (℘ X)) => {{ x | exists P, P ∈ S /\ x ∈ P }}).
+    refine (fun (S: ℘ (℘ X)) => {{{ x | exists P, P ∈ S /\ x ∈ P }}}).
     solve_proper.
   Defined.
 
   #[export]
   Instance PowersetInf : Inf (℘ X).
-    refine (fun (S: ℘ (℘ X)) => {{ x | forall P, P ∈ S -> x ∈ P }}).
+    refine (fun (S: ℘ (℘ X)) => {{{ x | forall P, P ∈ S -> x ∈ P }}}).
     solve_proper.
   Defined.
 
@@ -491,7 +489,7 @@ Section Powerset.
   #[program, export]
   Instance PowersetLattice: Lattice (℘ X).
 
-  #[program, global]
+  #[program, export]
   Instance PowersetCompleteLattice: CompleteLattice (℘ X).
   Next Obligation.
     split.
@@ -517,7 +515,7 @@ Section Projection.
 
   Context {A B: Type} `{!Equiv A} `{!Ord A} `{!Join A} `{!Meet A} `{!Sup A} `{!Inf A} `{!Top A} `{!Bottom A}.
 
-  Lemma projected_join_semi_lattice `{JoinSemiLattice B} (f: A -> B)
+  Lemma projected_join_semi_lattice `{JoinSemiLattice B} (f: A → B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f): JoinSemiLattice A.
@@ -533,7 +531,7 @@ Section Projection.
       destruct (H__fu H__u). split; now apply ord_correct.
     Qed.
 
-  Lemma projected_meet_semi_lattice `{MeetSemiLattice B} (f: A -> B)
+  Lemma projected_meet_semi_lattice `{MeetSemiLattice B} (f: A → B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (meet_correct : PreserveMeet f): MeetSemiLattice A.
@@ -549,7 +547,7 @@ Section Projection.
       destruct (H__fu H__u). split; now apply ord_correct.
     Qed.
 
-  Lemma projected_lattice `{Lattice B} (f: A -> B)
+  Lemma projected_lattice `{Lattice B} (f: A → B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f)
@@ -560,7 +558,7 @@ Section Projection.
     now apply (projected_meet_semi_lattice f).
   Qed.
 
-  Definition Build_ProjectedCompleteLattice `{CompleteLattice B} (f: A -> B)
+  Definition Build_ProjectedCompleteLattice `{CompleteLattice B} (f: A → B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (join_correct : PreserveJoin f)
@@ -591,7 +589,7 @@ Section Projection.
   Defined.
 
   #[program]
-  Definition alt2_Build_ProjectedCompleteLattice `{CompleteLattice B} (f: A -> B)
+  Definition alt2_Build_ProjectedCompleteLattice `{CompleteLattice B} (f: A → B)
     (eq_correct : forall x y, x = y <-> f x = f y)
     (ord_correct : forall x y, x ⊑ y <-> f x ⊑ f y)
     (sup_correct : PreserveSup f) := alt2_Build_CompleteLattice A (projected_poset f eq_correct ord_correct) _.
@@ -607,30 +605,26 @@ Section Projection.
 
 End Projection.
 
-Definition SigJoin {A: Type} `{!Equiv A} `{!Join A} (P: A -> Prop) `{!Proper ((=) ==> iff) P} (join_correct: StableJoin P): Join (sig P) :=
+Definition SigJoin {A: Type} `{!Equiv A} `{!Join A} (P: ℘ A) (join_correct: StableJoin P): Join (sig P) :=
   fun x y => (`x ⊔ `y) ↾ (join_correct _ _ (proj2_sig x) (proj2_sig y)).
 
-Definition SigMeet {A: Type} `{!Equiv A} `{!Meet A} (P: A -> Prop) `{!Proper ((=) ==> iff) P} (meet_correct: StableMeet P): Meet (sig P) :=
+Definition SigMeet {A: Type} `{!Equiv A} `{!Meet A} (P: ℘ A) (meet_correct: StableMeet P): Meet (sig P) :=
   fun x y => (`x ⊓ `y) ↾ (meet_correct _ _ (proj2_sig x) (proj2_sig y)).
 
-#[program]
-Definition SigSup {A: Type} `{Sup A} (P: A -> Prop) `{!Proper ((=) ==> iff) P} (sup_correct: StableSup P): Sup (sig P) :=
-  fun (S: ℘ ({ x: A | P x })) => (sup (Image (@proj1_sig _ P) S)) ↾ _.
-Next Obligation.
+Definition SigSup {A: Type} `{CompleteLattice A} (P: ℘ A) (sup_correct: StableSup P): Sup (sig P).
+  unshelve refine (fun (S: ℘ { x: A | P x }) => sup (Image proj1_sig_morphism S) ↾ _).
   apply sup_correct. intros x [[x' H__x'] [_ H__x]]. now rewrite H__x.
 Defined.
 
-#[program]
-Definition SigInf {A: Type} `{Inf A} (P: A -> Prop) `{!Proper ((=) ==> iff) P} (inf_correct: StableInf P): Inf (sig P) :=
-  fun (S: ℘ ({ x: A | P x })) => (inf (Image (@proj1_sig _ P) S)) ↾ _.
-Next Obligation.
+Definition SigInf {A: Type} `{CompleteLattice A} (P: ℘ A) (inf_correct: StableInf P): Inf (sig P).
+  unshelve refine (fun (S: ℘ { x: A | P x }) => inf (Image proj1_sig_morphism S) ↾ _).
   apply inf_correct. intros x [[x' H__x'] [_ H__x]]. now rewrite H__x.
 Defined.
 
-Definition SigTop {A: Type} `{!Equiv A} `{Top A} (P: A -> Prop) `{!Proper ((=) ==> iff) P} (top_correct: StableTop P): Top (sig P) :=
+Definition SigTop {A: Type} `{!Equiv A} `{Top A} (P: ℘ A) (top_correct: StableTop P): Top (sig P) :=
   ⊤ ↾ top_correct.
 
-Definition SigBottom {A: Type} `{!Equiv A} `{Bottom A} (P: A -> Prop) `{!Proper ((=) ==> iff) P}  (bottom_correct: StableBottom P): Bottom (sig P) :=
+Definition SigBottom {A: Type} `{!Equiv A} `{Bottom A} (P: ℘ A) (bottom_correct: StableBottom P): Bottom (sig P) :=
   ⊤ ↾ bottom_correct.
 
 #[global]
@@ -647,34 +641,34 @@ Hint Extern 10 (Top (sig _)) => now apply SigTop: typeclass_instances.
 Hint Extern 10 (Bottom (sig _)) => now apply SigBottom: typeclass_instances.
 
 #[global]
-Instance SigJoinSemiLattice {A: Type} `{JoinSemiLattice A} (P: A -> Prop) `{!Proper ((=) ==> iff) P}  (join_correct : StableJoin P):
+Instance SigJoinSemiLattice {A: Type} `{JoinSemiLattice A} (P: ℘ A) (join_correct : StableJoin P):
   JoinSemiLattice (sig P).
-Proof. now apply (projected_join_semi_lattice (@proj1_sig _ P)). Qed.
+Proof. now apply (projected_join_semi_lattice proj1_sig_morphism). Qed.
 
 #[global]
-Instance SigMeetSemiLattice {A: Type} `{MeetSemiLattice A} (P: A -> Prop) `{!Proper ((=) ==> iff) P} (meet_correct : StableMeet P):
+Instance SigMeetSemiLattice {A: Type} `{MeetSemiLattice A} (P: ℘ A) (meet_correct : StableMeet P):
   MeetSemiLattice (sig P).
-Proof. now apply (projected_meet_semi_lattice (@proj1_sig _ P)). Qed.
+Proof. now apply (projected_meet_semi_lattice proj1_sig_morphism). Qed.
 
 #[global]
-Instance SigLattice {A: Type} `{Lattice A} (P: A -> Prop) `{!Proper ((=) ==> iff) P}
+Instance SigLattice {A: Type} `{Lattice A} (P: ℘ A)
     (join_correct : StableJoin P) (meet_correct : StableMeet P): Lattice (sig P) := {}.
 
 #[global]
-Instance SigCompleteLattice {A: Type} `{CompleteLattice A} (P: A -> Prop) `{!Proper ((=) ==> iff) P}
+Instance SigCompleteLattice {A: Type} `{CompleteLattice A} (P: ℘ A)
   (join_correct : StableJoin P) (meet_correct : StableMeet P)
   (sup_correct : StableSup P) (inf_correct : StableInf P)
   (top_correct: StableTop P) (bottom_correct: StableBottom P):
   CompleteLattice (sig P).
 Proof.
-  apply (Build_ProjectedCompleteLattice (@proj1_sig _ P)); try now auto.
+  apply (Build_ProjectedCompleteLattice proj1_sig_morphism); try now auto.
   - cbv. reflexivity.
   - cbv. reflexivity.
 Qed.
 
 #[program]
-Definition alt2_Build_SigCompleteLattice {A: Type} `{CompleteLattice A} (P: A -> Prop) `{!Proper ((=) ==> iff) P}
-  (sup_correct : StableSup P) := alt2_Build_ProjectedCompleteLattice (@proj1_sig _ P) _ _ _.
+Definition alt2_Build_SigCompleteLattice {A: Type} `{CompleteLattice A} (P: ℘ A)
+  (sup_correct : StableSup P) := alt2_Build_ProjectedCompleteLattice (@proj1_sig_morphism _ _ P) _ _ _.
 Next Obligation.
   now split.
 Qed.
@@ -685,7 +679,8 @@ Next Obligation.
   repeat intro. reflexivity.
 Qed.
 
-Lemma join_sup_comm {A: Type} `{CompleteLattice A}:
+
+(*Lemma join_sup_comm {A: Type} `{CompleteLattice A}:
   forall (P Q: ℘ A), sup (P ⊔ Q) = (sup P) ⊔ (sup Q).
 Proof.
   intros P Q. apply antisymmetry.
@@ -700,23 +695,41 @@ Lemma meet_sup_semicomm {A: Type} `{CompleteLattice A}:
   forall (P Q: ℘ A), sup (P ⊓ Q) ⊑ (sup P) ⊓ (sup Q).
 Proof.
   intros P Q. apply sup_lub. intros x [H__P H__Q]. apply meet_glb. split; now apply sup_ub.
-Qed.
+Qed.*)
+
+Definition singletons_set {A: Type} `{CompleteLattice A} (P: ℘ A): ℘ (℘ A).
+  refine {{{ Q | exists x, x ∈ P /\ Q = {{ x }} }}}.
+  solve_proper.
+  Unshelve. apply H.
+Defined.
 
 Lemma set_decomposition {A: Type} `{CompleteLattice A}:
-  forall (P: ℘ A), SetProper P -> P = sup {{S | exists x, x ∈ P /\ S = {{ x }} /\ SetProper S }}.
+  forall (P: ℘ A), P = sup (singletons_set P).
 Proof.
-  intros P H__P. apply poset_antisym. (* strange behavior *)
-  - intros x H__x. exists {{ x }}. split.
+  intros P x. split.
+  - intros H__x. exists {{ x }}. split.
      exists x. now intuition.
     now apply set_contains_singleton.
-  - intros x [S [[x' [H__x' H__S]] H__x]].
+  - intros [S [[x' [H__x' H__S]] H__x]].
     assert (x = x') as H__eq. now apply H__S.
-    unfold SetContains.
     now rewrite H__eq.
+Qed.
+
+Definition preservesup_set {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q}: ℘ (P → Q).
+  unshelve refine {{{ f | PreserveSup f }}}.
+  apply H0. apply Sup0. apply Sup1.
+  intros f g H__fg. split; intros H__f S.
+  unfold PreserveSup in *. unfold PreserveSgSetOp in *.
+  specialize (H__f S).
+  assert (Image g S = Image f S). { now rewrite H__fg. }
+  assert (Sup1 (Image g S) = Sup1 (Image f S)). { now rewrite H1. }
+  rewrite H2.
+  rewrite H1.
+  rewrite H__fg in H__f.
 
 #[program]
-Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} :=
-  alt2_Build_SigCompleteLattice (fun f : P -> Q => PreserveSup f) _.
+Definition PreserveSupCompleteLattice {P Q: Type} `{CompleteLattice P} `{CompleteLattice Q} `{CompleteLattice (P → Q)} :=
+  alt2_Build_SigCompleteLattice {{{ f: (P → Q) | PreserveSup f }}} _.
 Next Obligation.
   intros S H__S S'. apply antisymmetry.
   - apply sup_lub. intros y [f [H__f H__y]]. rewrite H__y. rewrite H__S; auto.
